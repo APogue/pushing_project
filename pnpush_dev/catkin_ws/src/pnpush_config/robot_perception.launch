@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="gui" default="true" />
+  <arg name="have_robot" default="true" />
+  
+  <arg name="irb_120" default="true" />
+  
+  <param name="use_gui" value="$(arg gui)"/>
+  <param name="robot_description" textfile="$(find pnpush_config)/models/IRB120/irb_120.urdf" />
+    
+  <node if="$(arg irb_120)" pkg="tf" type="static_transform_publisher" name="baselink_broadcaster" args="0 0 0.60 0 1.57079632679 0 map base_link 100" />
+  
+
+  <node unless="$(arg have_robot)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+    <rosparam unless="$(arg have_robot)" command="load" file="$(find pnpush_config)/source_list_param.yaml" />
+  </node>
+  
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" />
+
+  <node pkg="tf" type="static_transform_publisher" name="viconworldlink_broadcaster" 
+  args="3.03101925e-01 -1.71822875e-01 4.25593177e-03 4.31342972e-03 1.86167268e-03 -4.16547749e-03 9.99980288e-01 /map /viconworld 100" />
+
+  <node pkg="tf" type="static_transform_publisher" name="vicontip_broadcaster" args="0 0 0.23487 0 0 0 /link_6 /vicon_tip 100" /> <!-- for transferring calib tip to link6-->
+
+
+</launch>
