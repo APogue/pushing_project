@@ -13,8 +13,8 @@ Created on Wed Nov  9 12:35:54 2016
         source_dir: Top-level directory with one subfolder for each
             surface material. In each surface folder, there needs to be one
             zip archive for each object, containing hdf5 files.
-            For example, download rect1_h5.zip to ~/pushdata/abs/rect1_h5.zip. 
-            Here, source_dir is ~/pushdata.
+            For example, download rect1_h5.zip to ~/push_exp/abs/rect1_h5.zip.
+            Here, source_dir is ~/push_exp.
         out_dir: Optional, output preprocessed data to a different location
         frequency: Desired frequency for resampling the data during
             synchronization, default: 180 Hz

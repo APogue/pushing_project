@@ -3,21 +3,16 @@
 # Peter KT Yu, Aug 2015
 # Plot the trajectory
 
-import numpy as np
-import json
 import h5py
 
-import matplotlib
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
 
-from catkin_ws.src.pnpush_config.src.config.shape_db import ShapeDB
+from config.shape_db import ShapeDB
 
-import tf.transformations as tfm
+from pushing_project.push_exp.tf import transformations as tfm
 from ik.helper import *
-from catkin_ws.src.pnpush_config.src.config.helper import *
-from matplotlib.pyplot import savefig
+from config.helper import *
 
 
 def plot(data, shape_id, figfname):

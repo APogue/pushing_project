@@ -1,5 +1,5 @@
 #!/bin/bash
-# edit PNPUSHDATA_BASE=$HOME/pushdata to your push data directory
+# edit PNPUSHDATA_BASE=$HOME/push_exp to your push data directory
 
 thisFile=$_
 if [ $BASH ] 

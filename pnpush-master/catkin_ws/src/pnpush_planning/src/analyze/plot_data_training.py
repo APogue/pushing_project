@@ -112,7 +112,7 @@ def main(argv):
 
     tagd = 'dynamic'
     figformat = 'png'
-    outdirname = '/home/mcube/pn-icra16-pushdata/pn-icra16-draft/figures/'
+    outdirname = '/home/mcube/pn-icra16-push_exp/pn-icra16-draft/figures/'
     labels = ['$x$', '$y$', '$\Delta x_p$', '$\Delta y_p$', '$f_x$', '$f_y$', r'$\Delta x_o$', r'$\Delta y_o$', r'$\Delta \theta_o$',
         '$v_x$', '$v_y$', '$v_x$', '$v_y$',  # 9:  tip_svx, tip_svy, tip_evx, tip_evy, 
         '$v_x$', '$v_y$', r'$\omega$',       # 13: object_pose_svx, object_pose_svy, object_pose_svtheta, # start speed
