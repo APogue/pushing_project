@@ -6,17 +6,15 @@ Created on Wed Nov  9 12:35:54 2016
 @author: Alina Kloss
     code mostly copied from
     https://github.com/peterkty/pnpush/blob/master/catkin_ws/src/pnpush_planning/src/analyze/extract_data_training.py
-
+    
     This code preprocesses the hdf5 files of the pushing dataset.
 
     Input:
         source_dir: Top-level directory with one subfolder for each
             surface material. In each surface folder, there needs to be one
-            folder for each object with zip archive containing hdf5 files.
-            For example ~/pd/abs/rect1/rect1_h5.zip. You should get this
-            structure automatically when you download (and unzip) the archives
-            for the different surface materials into the same folder.
-            Here, source_dir is ~/pd.
+            zip archive for each object, containing hdf5 files.
+            For example, download rect1_h5.zip to ~/push_exp/abs/rect1_h5.zip.
+            Here, source_dir is ~/push_exp.
         out_dir: Optional, output preprocessed data to a different location
         frequency: Desired frequency for resampling the data during
             synchronization, default: 180 Hz
@@ -32,8 +30,6 @@ Created on Wed Nov  9 12:35:54 2016
                 h5 datafile
         The data is saved to out_dir in the format [surface]/[object]/[file].h5
         The unzipped archives in source_dir are removed after preprocessing.
-        A list with all datafiles that contain errors or large jumps in the
-        object's orientation is saved to out_dir/error.logG
 """
 
 import os
@@ -45,7 +41,6 @@ import pandas as pd
 import zipfile
 import shutil
 import logging
-import csv
 
 
 class Preprocess:
@@ -54,8 +49,7 @@ class Preprocess:
         self.log = logging.getLogger('data_parser')
         self.log.setLevel(logging.DEBUG)
         # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s: [%(name)s] ' +
-                                      '[%(levelname)s] %(message)s')
+        formatter = logging.Formatter('%(asctime)s: [%(name)s] [%(levelname)s] %(message)s')
         # create console handler
         ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(logging.DEBUG)
@@ -88,22 +82,16 @@ class Preprocess:
         surfaces = [os.path.join(self.source_dir, f)
                     for f in os.listdir(self.source_dir) if
                     os.path.isdir(os.path.join(self.source_dir, f))]
+        # import pdb; pdb.set_trace()
         for s in surfaces:
             self.log.info(s)
             surface_name = os.path.basename(s)
 
-            # object folders
-            objects = [os.path.join(s, f) for f in os.listdir(s) if
-                       os.path.isdir(os.path.join(s, f))]
+            # collect the .zip files for the objects
+            datafiles = [os.path.join(s, f) for f in os.listdir(s) if
+                         f.endswith('zip') and 'h5' in f]
 
-            # each object folder contains zipped json, h5 and png files
-            # we want the h5 files
-            datafiles = []
-            for o in objects:
-                datafiles += [os.path.join(o, f) for f in os.listdir(o) if
-                              f.endswith('zip') and 'h5' in f]
-
-            # unzip the object folders into the surface-directory
+            # unzip the object folders
             for d in datafiles:
                 data_name = os.path.basename(d)
                 data_name = data_name[:data_name.find('.')]
@@ -120,34 +108,42 @@ class Preprocess:
                          if os.path.isdir(os.path.join(s, f)) and
                          f.endswith('h5')]
 
-            surface_out = os.path.join(self.out_dir, surface_name)
-            if not os.path.exists(surface_out):
-                os.mkdir(surface_out)
+            # delete old data in the output directory
+            out = os.path.join(self.out_dir, surface_name)
+            if not os.path.exists(out):
+                os.mkdir(out)
+            else:
+                out_folders = [os.path.join(out, f) for f in os.listdir(out)
+                               if not (f.endswith('zip') or f.endswith('h5'))]
+                for f in out_folders:
+                    shutil.rmtree(f)
 
             for d in datafiles:
                 # each directory corresponds to one object type
                 data_name = os.path.basename(d)
                 object_name = data_name[:data_name.find('_')]
 
-                # make a new directory for the object if necessary
-                target = os.path.join(surface_out, object_name)
+                # make a new directory
+                target = os.path.join(out, object_name)
                 if not os.path.exists(target):
+                    shutil.os.makedirs(target)
+                else:
+                    shutil.rmtree(target)
                     shutil.os.makedirs(target)
 
                 # get all the datafiles
-                filenames = [os.path.join(d, f) for f in os.listdir(d) if
-                             f.endswith('h5')]
-                # account for different folder structures
-                if filenames == []:
-                    dirname = [os.path.join(d, f) for f in os.listdir(d) if
-                               os.path.isdir(os.path.join(d, f))]
-                    for di in dirname:
-                        filenames += [os.path.join(di, f)
-                                      for f in os.listdir(di) if
-                                      f.endswith('h5')]
+                if surface_name == 'pu':
+                    #TODO This is obsolete if the folder structure for pu is changed
+                    tmp = os.path.join(d, os.listdir(d)[0])
+                    filenames = [os.path.join(tmp, f) for f in os.listdir(tmp)
+                                 if f.endswith('h5')]
+                else:
+                    filenames = [os.path.join(d, f) for f in os.listdir(d) if
+                                 f.endswith('h5')]
 
                 self.log.info('Preprocessing data for ' + d)
                 for i, f in enumerate(filenames):
+                    # print f
                     # get the push velocity
                     v_ind = f.find('_v=') + 3
                     vel = int(float(f[v_ind:f.find('_', v_ind)]))
@@ -186,7 +182,7 @@ class Preprocess:
                     with h5py.File(os.path.join(target,
                                                 name[name.find('_a=')+1:]),
                                    "w") as h5:
-                        for key, val in data.items():
+                        for key, val in data.iteritems():
                             h5.create_dataset(key, data=val)
 
                 # remove the unzipped folder to save diskspace
@@ -251,7 +247,8 @@ class Preprocess:
         tip_pose_2d.sort(key=lambda x: x[0])
 
         # ft, no redundency
-        ft_2d = np.array(force).tolist()
+        # TODO: I never checked the above statement :)
+        ft_2d = np.array(force)[:, 0:3].tolist()   # only need the force
         ft_2d.sort(key=lambda x: x[0])
 
         # all data needs to have the same length
@@ -284,13 +281,19 @@ class Preprocess:
             # define a threshold for the maximum allowed orientation jump,
             # depending on the time to the last measurement and the velocity
             # of the pusher, minimum 8 degree, maximum 15 degree
-            thresh = self._get_threshold(dt, vel)
+            thresh = max(min(0.25, 0.14 * (dt/0.004)), 0.07)
+            if vel > 75 and vel < 200:
+                thresh *= 1.25
+            elif vel >= 200:
+                thresh *= 1.5
+            elif vel < 0:
+                thresh *= 1.5
 
             if ind != 0 and np.abs(diff) > thresh:
-                # a jump by 2 pi is no problem due to the periodicity
+		# a jump by 2 pi is no problem due to the periodicity
                 if np.abs(np.abs(diff) - (2 * np.pi)) > thresh:
-                    # if the jump is close to a multiple of pi, it's a tracking
-                    # error and we correct it
+                    # if the jump is close to a multiple of pi, it's a tracking 
+		    # error and we correct it
                     if np.abs(diff - np.pi/2) < thresh:  # 90
                         data['object'][ind][-1] = a + np.pi/2
                     elif np.abs(diff + np.pi/2) < thresh:  # -90
@@ -304,13 +307,20 @@ class Preprocess:
                     elif np.abs(diff + 3*np.pi/2) < thresh:  # - 270
                         data['object'][ind][-1] = a - 3*np.pi/2
                     elif ind != len(data['object']) - 1:
-                        # if the jump does not fit with the above, it could be
-                        # streched over multiple timesteps, so we look ahead a
+			# if the jump does not fit with the above, it could be
+			# streched over multiple timesteps, so we look ahead a
                         # bit to see if the jump gets bigger
                         next_ind = ind + 1
                         next_diff = a - data['object'][next_ind][-1]
                         next_dt = data['object'][next_ind][0] - t
-                        next_thresh = self._get_threshold(next_dt, vel)
+                        next_thresh = max(min(0.25, 0.14*(next_dt/0.004)),
+                                          0.07)
+                        if vel > 75 and vel < 200:
+                            next_thresh *= 1.25
+                        elif vel >= 200:
+                            next_thresh *= 1.5
+                        elif vel < 0:
+                            next_thresh *= 1.5
                         while next_ind + 1 < len(data['object']) and \
                                 np.abs(next_diff) > next_thresh and \
                                 np.sign(next_diff) == np.sign(diff):
@@ -319,79 +329,66 @@ class Preprocess:
                                 data['object'][next_ind][-1]
                             next_dt = data['object'][next_ind][0] - \
                                 data['object'][next_ind-1][0]
-                            next_thresh = self._get_threshold(next_dt, vel)
+                            next_thresh = max(min(0.25,
+                                                  0.14*(next_dt/0.004)), 0.07)
+                            if vel > 75 and vel < 200:
+                                next_thresh *= 1.25
+                            elif vel >= 200:
+                                next_thresh *= 1.5
+                            elif vel < 0:
+                                next_thresh *= 1.5
 
                         # next_ind is either the end of the file or the first
                         # index where the jump did not increase in magnitude
                         # anymore. In the latter case, we subtract 1 to get the
                         # index of the jump's end
-                        if next_ind != len(data['object'])-1 or \
-                                (next_ind == len(data['object'])-1 and
-                                 (a - data['object'][next_ind][-1]) < thresh):
+                        if next_ind != len(data['object'])-1:
                             next_ind -= 1
 
-                        if next_ind > ind:
-                            # correct the full-value jump for the last index
-                            corrected = True
-                            total_diff = a - data['object'][next_ind][-1]
-                            if np.abs(total_diff - np.pi/2) < thresh:  # 90
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] + np.pi/2
-                            elif np.abs(total_diff + np.pi/2) < thresh:  # -90
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] - np.pi/2
-                            elif np.abs(total_diff - np.pi) < thresh:  # 180
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] + np.pi
-                            elif np.abs(total_diff + np.pi) < thresh:  # -180
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] - np.pi
-                            elif np.abs(total_diff - 3*np.pi/2) < thresh:  # 270
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] + 3*np.pi/2
-                            elif np.abs(total_diff + 3*np.pi/2) < thresh:  # - 270
-                                data['object'][next_ind][-1] = \
-                                    data['object'][next_ind][-1] - 3*np.pi/2
-                            else:
-                                corrected = False
-
-                            if not corrected and not blacklisted:
-                                error = 'Large orientation jump: ' + \
-                                    'difference in degree: ' + \
-                                    str(180 * total_diff / np.pi) + \
-                                    ', step: ' + str(ind)
-                                self.log.error('File: ' +
-                                               os.path.basename(filename) +
-                                               ': ' + error)
-                                blacklisted = True
-                            else:
-                                self.log.debug('correcting longer jump: ' +
-                                               'File: ' +
-                                               os.path.basename(filename))
-                                # correct the other values by linearly fitting
-                                # the total angle jump
-                                # get the slope of the orientation
-                                m = (data['object'][next_ind][-1] - last) / \
-                                    (data['object'][next_ind][0] - last_t)
-                                for l in np.arange(ind, next_ind):
-                                    dt_l = data['object'][l][0] - last_t
-                                    data['object'][l][-1] = last + dt_l * m
+                        # correct the full-value jump for the last index
+                        corrected = True
+                        total_diff = a - data['object'][next_ind][-1]
+                        if np.abs(total_diff - np.pi/2) < thresh:  # 90
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] + np.pi/2
+                        elif np.abs(total_diff + np.pi/2) < thresh:  # -90
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] - np.pi/2
+                        elif np.abs(total_diff - np.pi) < thresh:  # 180
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] + np.pi
+                        elif np.abs(total_diff + np.pi) < thresh:  # -180
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] - np.pi
+                        elif np.abs(total_diff - 3*np.pi/2) < thresh:  # 270
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] + 3*np.pi/2
+                        elif np.abs(total_diff + 3*np.pi/2) < thresh:  # - 270
+                            data['object'][next_ind][-1] = \
+                                data['object'][next_ind][-1] - 3*np.pi/2
                         else:
-                            if not blacklisted:
-                                error = ': Large orientation jump: ' + \
-                                    'difference in degree: ' + \
-                                    str(180*diff/np.pi) + ', step: ' + str(ind)
-                                self.log.error('File: ' +
-                                               os.path.basename(filename) +
-                                               error)
-                                blacklisted = True
+                            corrected = False
+
+                        if not corrected and not blacklisted:
+                            self.log.error('File: ' +
+                                           os.path.basename(filename) +
+                                           ': [Large orientation jump]: ' +
+                                           str(total_diff))
+                            blacklisted = True
+                        else:
+                            # correct the other values by linearly fitting the
+                            # total angle jump
+                            # get the slope of the orientation
+                            m = (data['object'][next_ind][-1] - last) / \
+                                (data['object'][next_ind][0] - last_t)
+                            for l in np.arange(ind, next_ind):
+                                dt_l = data['object'][l][0] - last_t
+                                data['object'][l][-1] = last + dt_l * m
+
                     elif not blacklisted:
-                        self.log.debug('not in pi and eof')
-                        error = 'Large orientation jump: ' + \
-                            'difference in degree: ' + \
-                            str(180*diff/np.pi) + ', step: ' + str(ind)
                         self.log.error('File: ' + os.path.basename(filename) +
-                                       ': ' + error)
+                                       ': [Large orientation jump]: ' +
+                                       str(diff))
                         blacklisted = True
 
             last = data['object'][ind][-1]
@@ -410,19 +407,12 @@ class Preprocess:
                 a += 2 * np.pi
             elif a > np.pi:
                 a -= 2 * np.pi
+            if a != dat[-1]:
+                self.log.warning('adjusted angle: ' + str(dat[-1]) + ' -> ' +
+                                 str(a))
             data['object'][ind][-1] = a
 
         return data
-
-    def _get_threshold(self, dt, vel):
-        thresh = max(min(0.25, 0.14 * (dt/0.004)), 0.07)
-        if vel > 75 and vel < 200:
-            thresh *= 1.25
-        elif vel >= 200:
-            thresh *= 1.5
-        elif vel < 0:
-            thresh *= 1.5
-        return thresh
 
     def _resample(self, data, f, interval):
         object_poses_2d = data['object']
@@ -443,32 +433,31 @@ class Preprocess:
 
         # the number of datapoints between start and end should be
         # approximately the same in each recording
-        o_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      object_poses_2d))
-        t_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      tip_poses_2d))
-        f_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      force_2d))
-        #print(len(o_in), len(t_in), len(f_in)) 
+        o_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      object_poses_2d)
+        t_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      object_poses_2d)
+        f_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      object_poses_2d)
         if np.abs(len(o_in) - len(f_in)) > 20 or  \
                 np.abs(len(f_in) - len(t_in)) > 20 or \
                 np.abs(len(t_in) - len(o_in)) > 20:
-            error = 'Unbalanced data:  force: ' + str(len(f_in)) + \
-                ', object:' + str(len(o_in)) + ', tip:' + str(len(t_in)) + \
-                ' timesteps between start and end'
-            self.log.error('File: ' + os.path.basename(f) + ': ' + error)
+            self.log.error('File: ' + os.path.basename(f) +
+                           ': [Unbalanced data]:  force: ' +
+                           str(len(f_in)) + ', object:' +
+                           str(len(o_in)) + ', tip:' + str(len(t_in)) +
+                           ' timesteps between start and end')
 
         tip_poses_2d_dt = pd.to_datetime(np.array(tip_poses_2d)[:, 0].tolist(),
                                          unit='s')
         tip_poses_2d = pd.DataFrame(np.array(tip_poses_2d)[:, 1:3].tolist(),
                                     index=tip_poses_2d_dt)
-        tip_poses_2d_resampled = tip_poses_2d.resample(interval).mean()
+        tip_poses_2d_resampled = tip_poses_2d.resample(interval, how='mean')
         tip_poses_2d_interp = tip_poses_2d_resampled.interpolate()
 
         start_ = tip_poses_2d_interp.index.searchsorted(pd_starttime)
         end_ = tip_poses_2d_interp.index.searchsorted(pd_endtime)
-        # print(end_)
-        tip_poses_2d_interp = tip_poses_2d_interp.iloc[start_:end_]
+        tip_poses_2d_interp = tip_poses_2d_interp.ix[start_:end_]
         tip_poses_2d_interp_list = tip_poses_2d_interp.values.tolist()
 
         object_poses_2d_dt = \
@@ -476,21 +465,23 @@ class Preprocess:
         object_poses_2d = \
             pd.DataFrame(np.array(object_poses_2d)[:, 1:4].tolist(),
                          index=object_poses_2d_dt)
-        object_poses_2d_resampled = object_poses_2d.resample(interval).mean()
+        object_poses_2d_resampled = object_poses_2d.resample(interval,
+                                                             how='mean')
         object_poses_2d_interp = object_poses_2d_resampled.interpolate()
         start_ = object_poses_2d_interp.index.searchsorted(pd_starttime)
         end_ = object_poses_2d_interp.index.searchsorted(pd_endtime)
-        object_poses_2d_interp = object_poses_2d_interp.iloc[start_:end_]
+        object_poses_2d_interp = object_poses_2d_interp.ix[start_:end_]
         object_poses_2d_interp_list = object_poses_2d_interp.values.tolist()
 
+
         force_dt = pd.to_datetime(np.array(force_2d)[:, 0].tolist(), unit='s')
-        force_2d = pd.DataFrame(np.array(force_2d)[:, 1:4].tolist(),
+        force_2d = pd.DataFrame(np.array(force_2d)[:, 1:3].tolist(),
                                 index=force_dt)
-        force_2d_resampled = force_2d.resample(interval).mean()
+        force_2d_resampled = force_2d.resample(interval, how='mean')
         force_2d_interp = force_2d_resampled.interpolate()
         start_ = force_2d_interp.index.searchsorted(pd_starttime)
         end_ = force_2d_interp.index.searchsorted(pd_endtime)
-        force_2d_interp = force_2d_interp.iloc[start_:end_]
+        force_2d_interp = force_2d_interp.ix[start_:end_]
         force_2d_interp_list = force_2d_interp.values.tolist()
 
         data_resample = {}
@@ -502,6 +493,9 @@ class Preprocess:
                 len(data_resample['object']) == 0 or \
                 len(data_resample['force']) == 0:
             self.log.error('File: ' + f + ': [Resampling failed]')
+            self.log.debug(str(len(data_resample['tip'])) + ', ' +
+                           str(len(data_resample['object'])) +
+                           ', ' + str(len(data_resample['force'])))
             return None
         else:
             return data_resample
@@ -510,7 +504,7 @@ class Preprocess:
         num = len(data['object'])
         new_data = {'object': np.zeros((num, 3), dtype=np.float32),
                     'tip': np.zeros((num, 2), dtype=np.float32),
-                    'force': np.zeros((num, 3), dtype=np.float32)}
+                    'force': np.zeros((num, 2), dtype=np.float32)}
         # set the initial object position to and oreinatation to zero. This way
         # it can be changed easier when rendering images
         init_ob_pose = np.copy(np.array(data['object'][0]))
@@ -530,15 +524,6 @@ class Preprocess:
             p = np.dot(rot, p)
             # subtract the initial orientation
             a = (pos[2] - ang)
-
-            # this could take the orientation out of [-pi, pi] again, so we
-            # readjust
-            if a < -np.pi:
-                a += 2 * np.pi
-            elif a > np.pi:
-                a -= 2 * np.pi
-            assert (a >= -np.pi and a <= np.pi), \
-                ('after zero: ' + str(a) + ' ' + str(ang) + ' ' + str(pos[2]))
             new_data['object'][i, :2] = p[:2].astype(np.float32)
             new_data['object'][i, 2] = a.astype(np.float32)
 
@@ -553,12 +538,11 @@ class Preprocess:
 
         # rotate the force vectors
         for i, f in enumerate(data['force']):
-            # get the linear force vector
-            p = np.array(f)[:2]
+            # get the vector from initial position to force
+            p = np.array(f) - init_ob_pose[:2]
             # rotate
             p = np.dot(rot, p)
-            out = np.array([p[0], p[1], np.array(f)[2]])
-            new_data['force'][i, :] = out.astype(np.float32)
+            new_data['force'][i, :] = p[:2].astype(np.float32)
 
         return new_data
 

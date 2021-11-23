@@ -82,7 +82,7 @@ class Preprocess:
         surfaces = [os.path.join(self.source_dir, f)
                     for f in os.listdir(self.source_dir) if
                     os.path.isdir(os.path.join(self.source_dir, f))]
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         for s in surfaces:
             self.log.info(s)
             surface_name = os.path.basename(s)
@@ -143,7 +143,7 @@ class Preprocess:
 
                 self.log.info('Preprocessing data for ' + d)
                 for i, f in enumerate(filenames):
-                    print f
+                    # print f
                     # get the push velocity
                     v_ind = f.find('_v=') + 3
                     vel = int(float(f[v_ind:f.find('_', v_ind)]))

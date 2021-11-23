@@ -33,7 +33,7 @@ Created on Wed Nov  9 12:35:54 2016
         The data is saved to out_dir in the format [surface]/[object]/[file].h5
         The unzipped archives in source_dir are removed after preprocessing.
         A list with all datafiles that contain errors or large jumps in the
-        object's orientation is saved to out_dir/error.logG
+        object's orientation is saved to out_dir/error.log
 """
 
 import os
@@ -186,7 +186,7 @@ class Preprocess:
                     with h5py.File(os.path.join(target,
                                                 name[name.find('_a=')+1:]),
                                    "w") as h5:
-                        for key, val in data.items():
+                        for key, val in data.iteritems():
                             h5.create_dataset(key, data=val)
 
                 # remove the unzipped folder to save diskspace
@@ -443,13 +443,12 @@ class Preprocess:
 
         # the number of datapoints between start and end should be
         # approximately the same in each recording
-        o_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      object_poses_2d))
-        t_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      tip_poses_2d))
-        f_in = list(filter(lambda x: x[0] > starttime and x[0] < endtime,
-                      force_2d))
-        #print(len(o_in), len(t_in), len(f_in)) 
+        o_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      object_poses_2d)
+        t_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      tip_poses_2d)
+        f_in = filter(lambda x: x[0] > starttime and x[0] < endtime,
+                      force_2d)
         if np.abs(len(o_in) - len(f_in)) > 20 or  \
                 np.abs(len(f_in) - len(t_in)) > 20 or \
                 np.abs(len(t_in) - len(o_in)) > 20:
@@ -462,13 +461,12 @@ class Preprocess:
                                          unit='s')
         tip_poses_2d = pd.DataFrame(np.array(tip_poses_2d)[:, 1:3].tolist(),
                                     index=tip_poses_2d_dt)
-        tip_poses_2d_resampled = tip_poses_2d.resample(interval).mean()
+        tip_poses_2d_resampled = tip_poses_2d.resample(interval, how='mean')
         tip_poses_2d_interp = tip_poses_2d_resampled.interpolate()
 
         start_ = tip_poses_2d_interp.index.searchsorted(pd_starttime)
         end_ = tip_poses_2d_interp.index.searchsorted(pd_endtime)
-        # print(end_)
-        tip_poses_2d_interp = tip_poses_2d_interp.iloc[start_:end_]
+        tip_poses_2d_interp = tip_poses_2d_interp.ix[start_:end_]
         tip_poses_2d_interp_list = tip_poses_2d_interp.values.tolist()
 
         object_poses_2d_dt = \
@@ -476,21 +474,22 @@ class Preprocess:
         object_poses_2d = \
             pd.DataFrame(np.array(object_poses_2d)[:, 1:4].tolist(),
                          index=object_poses_2d_dt)
-        object_poses_2d_resampled = object_poses_2d.resample(interval).mean()
+        object_poses_2d_resampled = object_poses_2d.resample(interval,
+                                                             how='mean')
         object_poses_2d_interp = object_poses_2d_resampled.interpolate()
         start_ = object_poses_2d_interp.index.searchsorted(pd_starttime)
         end_ = object_poses_2d_interp.index.searchsorted(pd_endtime)
-        object_poses_2d_interp = object_poses_2d_interp.iloc[start_:end_]
+        object_poses_2d_interp = object_poses_2d_interp.ix[start_:end_]
         object_poses_2d_interp_list = object_poses_2d_interp.values.tolist()
 
         force_dt = pd.to_datetime(np.array(force_2d)[:, 0].tolist(), unit='s')
         force_2d = pd.DataFrame(np.array(force_2d)[:, 1:4].tolist(),
                                 index=force_dt)
-        force_2d_resampled = force_2d.resample(interval).mean()
+        force_2d_resampled = force_2d.resample(interval, how='mean')
         force_2d_interp = force_2d_resampled.interpolate()
         start_ = force_2d_interp.index.searchsorted(pd_starttime)
         end_ = force_2d_interp.index.searchsorted(pd_endtime)
-        force_2d_interp = force_2d_interp.iloc[start_:end_]
+        force_2d_interp = force_2d_interp.ix[start_:end_]
         force_2d_interp_list = force_2d_interp.values.tolist()
 
         data_resample = {}

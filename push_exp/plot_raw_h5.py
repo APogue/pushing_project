@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from config.shape_db import ShapeDB
 
-from pushing_project.push_exp.tf import transformations as tfm
+from tf import transformations as tfm
 from ik.helper import *
 from config.helper import *
 
@@ -169,19 +169,18 @@ def main(argv):
         return
     
     h5_filepath = argv[1]
+    print argv[0], h5_filepath, len(sys.argv)
     
     if len(argv) < 3:
         choice = 'snapshots'
     else:
         choice = argv[2]
 
-
     data = h5py.File(h5_filepath, "r", driver='core')
-    
-    
     figname = h5_filepath.replace('.h5', '.png')
     shape_id = getfield_from_filename(figname, 'shape')
-    if shape_id == 'butt': 
+
+    if shape_id == 'butt':
         shape_id = 'butter'
     if choice == 'snapshots':
         plot(data, shape_id, figname)
@@ -189,10 +188,17 @@ def main(argv):
         plot_force_profile(data, shape_id, figname, multidim = True)
     elif choice == 'tip_speed_profile':
         plot_speed_profile(data, shape_id, figname, multidim = True)
-        
+
     data.close()
 
 if __name__=='__main__':
+
+    # typical commandline command:
+    # python plot_raw_h5.py
+    # ~/pd/delrin/rect1_h5/motion_surface=delrin_shape=rect1_a=0_v=10_i=0.000_s=0.000_t=0.698.h5
+    # tip_speed_profile
+    # w/no third arg the script assumes 'snapshots'
+    # TODO: currently dumps output into input file
+
     import sys
     main(sys.argv)
-    
