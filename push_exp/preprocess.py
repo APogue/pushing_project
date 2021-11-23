@@ -564,9 +564,10 @@ def main(argv=None):
 
     # turn the frequency in a time interval string for pandas
     dt = 1. / args.frequency
+    print dt
     dt *= 1000000
     dt = str(int(np.round(dt))) + 'us'
-
+    print dt
     pre = Preprocess(args)
     pre.preprocess_data(dt)
 

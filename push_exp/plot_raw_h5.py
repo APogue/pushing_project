@@ -54,7 +54,9 @@ def plot(data, shape_id, figfname):
         shape_polygon_3d = np.hstack((np.array(shape[0]), np.zeros((len(shape[0]), 1)), np.ones((len(shape[0]), 1))))
     
     object_pose = data['object_pose']
-    
+
+    print object_pose
+
     if len(object_pose) > 0:
         #invT0 = np.linalg.inv(matrix_from_xyzquat(object_pose[0][1:4], object_pose[0][4:8]))
         invT0 = np.linalg.inv(matrix_from_xyzrpy(object_pose[0][1:3].tolist() + [0], [0,0,object_pose[0][3]]))
@@ -148,13 +150,13 @@ def plot_speed_profile(data, shape_id, figfname, multidim):
     
     starttime = tip_pose[0][0]
     timearray = np.array(tip_pose)[:,0] - starttime
-    
+    print(np.size(timearray))
     tip_pose = np.array(tip_pose)
     timediff = (tip_pose[1:,0:1] - tip_pose[0:-1,0:1])
     
     tip_vel = (tip_pose[1:,1:3] - tip_pose[0:-1,1:3]) / np.hstack((timediff, timediff))
     tip_speed = np.sqrt(tip_vel[:,0:1]**2 + tip_vel[:,1:2]**2)
-    
+    print(np.shape(tip_pose))
     f, ax = plt.subplots(1, sharex = True)
     ax.plot(timearray[1:], tip_speed)
     ax.set_xlabel('time (sec)')
