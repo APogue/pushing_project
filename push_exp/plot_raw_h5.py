@@ -58,7 +58,6 @@ def plot(data, shape_id, figfname):
     print object_pose
 
     if len(object_pose) > 0:
-        #invT0 = np.linalg.inv(matrix_from_xyzquat(object_pose[0][1:4], object_pose[0][4:8]))
         invT0 = np.linalg.inv(matrix_from_xyzrpy(object_pose[0][1:3].tolist() + [0], [0,0,object_pose[0][3]]))
     elif len(tip_pose) > 0:
         invT0 = np.linalg.inv(matrix_from_xyzquat(tip_pose[0][1:3].tolist() +[0], [0,0,0,1]))

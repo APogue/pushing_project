@@ -51,7 +51,6 @@ def plot_processed_object_pose(data_proc):
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('y_pos (cm)')
 
-
     ax2 = plt.subplot(313)
     ax2.plot(timearray, pose)
     ax2.set_xlabel('time (sec)')
@@ -61,29 +60,54 @@ def plot_processed_object_pose(data_proc):
 
     plt.show()
 
+def _transform_back_frame2d(pts,f):
+    # this will go in helper file
+    # transform_back_frame2d (pts, f)
+    ## pts: row vectors [x,y]
+    ## x: row vector [x,y,theta] which defines a 2d frame
+    ## return: row point vectors in frame f, [x,y]
+    pts_array = np.array(pts).reshape(-1, 2)
+    theta = -f[2]
+    c = cos(theta)
+    s = sin(theta)
+    T = np.array([[c, -s, f[0]],
+                  [s, c, f[1]],
+                  [0, 0, 1]])
+    pts_ret = np.dot(T, np.vstack((pts_array.T, np.ones((1, pts_array.shape[0])))))
+    return pts_ret[0:2, :].transpose()
+
+
 def plot_raw_object_pose(data_raw):
     # this data needs processing, see the plot_raw data to understand helper functions
     # see preprocess _zero_initial_position function to understand how the data is preprocessed
     # check the papers, I assume then that the 'origin' is the intial position of the object, i.e. the remaining way
     # are deltas
     # the object moves wrt the world frame, from the perspective of the world frame which is the object's initial position
-    
+
     object = data_raw['object_pose']
     object = np.array(object)
     starttime = object[0, 0:1]
     startx = object[0, 1:2]
     starty = object[0, 2:3]
     startpose = object[0, 3:4]
-    print startx
-    print starty
+    # print startx
+    # print starty
 
     timearray = object[:, 0:1] - starttime
 
-    x_pos = (object[:, 1:2]-startx)*100 # in cm
-    y_pos = (object[:, 2:3]-starty)*100 # in cm
+    # x_pos = (object[:, 1:2]-startx)*100 # in cm
+    # y_pos = (object[:, 2:3]-starty)*100 # in cm
     pose = object[:, 3:4] - startpose
 
-    # print(np.size(tip))
+    pts = (object[:, 1:3])*100
+    f =np.array([startx, starty, startpose])
+    pts_world_frame2d = _transform_back_frame2d(pts, f)
+    startx = pts_world_frame2d[0, 0:1]
+    starty = pts_world_frame2d[0, 1:2]
+
+    x_pos = pts_world_frame2d[:, 0:1] - startx
+    y_pos = pts_world_frame2d[:, 1:2] - starty
+
     f, ax = plt.subplots(1, sharex=True)
     plt.figure(1)
     ax1 = plt.subplot(311)
@@ -129,8 +153,8 @@ def main(argv):
     # figname = h5_filepath.replace('.h5', '.png')
     shape_id = 'rect1'
 
-    data_readout(data_raw, data_proc)
-    plot_processed_object_pose(data_proc)
+    # data_readout(data_raw, data_proc)
+    # plot_processed_object_pose(data_proc)
     plot_raw_object_pose(data_raw)
 
     # plot(data, shape_id, figname)

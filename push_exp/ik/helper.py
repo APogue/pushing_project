@@ -19,11 +19,11 @@ def qwxyz_from_qxyzw(pose):
     return [pose[3]]+list(pose[0:3])
     
 def matrix_from_xyzquat(translate, quaternion):
-    return np.dot(tfm.compose_matrix(translate=translate) , 
+    return np.dot(tfm.compose_matrix(translate=translate),
                    tfm.quaternion_matrix(quaternion)).tolist()
                    
 def matrix_from_xyzrpy(translate, rpy):
-    return np.dot(tfm.compose_matrix(translate=translate) , 
+    return np.dot(tfm.compose_matrix(translate=translate),
                    tfm.euler_matrix(*rpy)).tolist()
                    
 def rotmatrix_from_quat(quaternion):
@@ -53,6 +53,8 @@ def getObjCOM(objPose, objId):
 def __reduce(nparray):
     if nparray.shape[0] == 1:
         return nparray.reshape(-1)
+    else:
+        return nparray
         
 def transform_to_frame2d(pts, f):
 #transform_to_frame2d (pts, f)
