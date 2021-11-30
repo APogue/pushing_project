@@ -129,6 +129,7 @@ def plot_speed_profile(data, shape_id, figfname, multidim):
     ax.plot(timearray[1:], tip_speed)
     ax.set_xlabel('time (sec)')
     ax.set_ylabel('speed (m/s)')
+    ax.set_ylim(0, .016)
     plt.show()
 
 def main(argv):
