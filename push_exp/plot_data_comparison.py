@@ -10,8 +10,6 @@ from ik.helper import *
 from config.helper import *
 
 
-
-
 # what is in the data
 # raw data
 # tip_pose: time (s), x, y position (meters) wrt robot frame, orientation (?) tip in rad
@@ -26,14 +24,12 @@ def data_readout(data_raw, data_proc):
     print data_proc['object']
 
 
-
-
 # plot the data
 def plot_processed_object_pose(data_proc):
     object = data_proc['object']
     dt = 1 / 180.0
     starttime = 0.0
-    endtime = (np.shape(object)[0]+1) * dt
+    endtime = (np.shape(object)[0]) * dt
     timearray = np.arange(0, endtime, dt) - starttime
     # print(np.size(timearray))
 
@@ -46,18 +42,18 @@ def plot_processed_object_pose(data_proc):
     f, ax = plt.subplots(1, sharex=True)
     plt.figure(1)
     ax1 = plt.subplot(311)
-    ax1.plot(timearray[1:], x_pos)
+    ax1.plot(timearray, x_pos)
     ax1.set_xlabel('time (sec)')
     ax1.set_ylabel('x_pos (cm)')
 
     ax2 = plt.subplot(312)
-    ax2.plot(timearray[1:], y_pos)
+    ax2.plot(timearray, y_pos)
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('y_pos (cm)')
 
 
     ax2 = plt.subplot(313)
-    ax2.plot(timearray[1:], pose)
+    ax2.plot(timearray, pose)
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('pose (rad)')
 
@@ -65,9 +61,50 @@ def plot_processed_object_pose(data_proc):
 
     plt.show()
 
+def plot_raw_object_pose(data_raw):
+    # this data needs processing, see the plot_raw data to understand helper functions
+    # see preprocess _zero_initial_position function to understand how the data is preprocessed
+    # check the papers, I assume then that the 'origin' is the intial position of the object, i.e. the remaining way
+    # are deltas
+    # the object moves wrt the world frame, from the perspective of the world frame which is the object's initial position
+    
+    object = data_raw['object_pose']
+    object = np.array(object)
+    starttime = object[0, 0:1]
+    startx = object[0, 1:2]
+    starty = object[0, 2:3]
+    startpose = object[0, 3:4]
+    print startx
+    print starty
+
+    timearray = object[:, 0:1] - starttime
+
+    x_pos = (object[:, 1:2]-startx)*100 # in cm
+    y_pos = (object[:, 2:3]-starty)*100 # in cm
+    pose = object[:, 3:4] - startpose
+
+    # print(np.size(tip))
+    f, ax = plt.subplots(1, sharex=True)
+    plt.figure(1)
+    ax1 = plt.subplot(311)
+    ax1.plot(timearray, x_pos)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
+
+    ax2 = plt.subplot(312)
+    ax2.plot(timearray, y_pos)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('y_pos (cm)')
 
 
+    ax2 = plt.subplot(313)
+    ax2.plot(timearray, pose)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('pose (rad)')
 
+    ax1.set_title('object position raw data')
+
+    plt.show()
 
 
 
@@ -94,6 +131,7 @@ def main(argv):
 
     data_readout(data_raw, data_proc)
     plot_processed_object_pose(data_proc)
+    plot_raw_object_pose(data_raw)
 
     # plot(data, shape_id, figname)
     # plot_speed_profile(data, shape_id, figname, multidim=True)
