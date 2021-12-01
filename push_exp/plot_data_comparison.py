@@ -64,8 +64,8 @@ def plot_processed_object_pose(data_proc):
     plt.show()
 
 
-def _transform_back_frame2d(pts,f):
-    # this will go in helper file
+def _transform_back_frame2d(pts, f):
+    # TODO: this will go in helper file
     # transform_back_frame2d (pts, f)
     # pts: row vectors [x,y]
     # f: row vector [x,y,theta] b frame wrt origin
@@ -224,13 +224,24 @@ def main(argv):
     shape_id = 'rect1'
 
     data_readout(data_raw, data_proc)
-    # plot_processed_object_pose(data_proc)
+    plot_processed_object_pose(data_proc)
     plot_raw_object_pose(data_raw)
-    # TODO: is this reasonable? check block sizes
-    # plot_processed_tip_pose(data_proc)
-    # plot_raw_tip_pose(data_raw)
+
+    # TODO: is this reasonable? check block sizes (add to the blog post)
+    plot_processed_tip_pose(data_proc)
+    plot_raw_tip_pose(data_raw)
     data_raw.close()
     data_proc.close()
+
+    # length data
+    # initial and final time
+    # time step
+    # tip speed
+    # pose snapshots
+    # object position
+    # tip position
+    # png of rotation stuff
+    # object photo from the mcube website
 
 
 if __name__=='__main__':
