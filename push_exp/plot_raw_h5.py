@@ -126,9 +126,9 @@ def plot_force_profile(data, shape_id, figfname, multidim):
     timearray = np.array(data['ft_wrench'])[:,0] - starttime
     if multidim:
         f, axarr = plt.subplots(3, sharex = True)
-        axarr[0].plot(timearray, np.array(force_obj)[:,0])
-        axarr[1].plot(timearray, np.array(force_obj)[:,1])
-        axarr[2].plot(timearray, np.array(force_obj)[:,2])
+        axarr[0].plot(timearray, np.array(force_obj)[:, 0])
+        axarr[1].plot(timearray, np.array(force_obj)[:, 1])
+        axarr[2].plot(timearray, np.array(force_obj)[:, 2])
         axarr[0].set_xlabel('time (sec)')
         axarr[0].set_ylabel('force (N)')
         

@@ -20,26 +20,29 @@ def data_readout(data_raw, data_proc):
 
     print data_raw.keys()
     print data_proc.keys()
-    print data_raw['object_pose']
+    print data_raw['object_pose'], 'object pose'
     print data_proc['object']
+
+    print data_raw['tip_pose'], 'tip_pose'
+    print data_proc['tip']
 
 
 # plot the data
 def plot_processed_object_pose(data_proc):
     object = data_proc['object']
-    dt = 1 / 180.0
+    dt = 1 / 180.0  # this value is set in preprocess.py
     starttime = 0.0
     endtime = (np.shape(object)[0]) * dt
     timearray = np.arange(0, endtime, dt) - starttime
-    # print(np.size(timearray))
+
+    print timearray[0], timearray[-1], 'processed initial and final time'
+    print dt, 'timediff'
 
     object = np.array(object)
     x_pos = object[:, 0:1]*100 # in cm
     y_pos = object[:, 1:2]*100 # in cm
     pose = object[:, 2:3]
 
-    # print(np.size(tip))
-    f, ax = plt.subplots(1, sharex=True)
     plt.figure(1)
     ax1 = plt.subplot(311)
     ax1.plot(timearray, x_pos)
@@ -60,55 +63,55 @@ def plot_processed_object_pose(data_proc):
 
     plt.show()
 
+
 def _transform_back_frame2d(pts,f):
     # this will go in helper file
     # transform_back_frame2d (pts, f)
-    ## pts: row vectors [x,y]
-    ## x: row vector [x,y,theta] which defines a 2d frame
-    ## return: row point vectors in frame f, [x,y]
+    # pts: row vectors [x,y]
+    # f: row vector [x,y,theta] b frame wrt origin
+    # return: row point vectors in frame b, [x,y]
+    # T = np.array([[c, s, f[0]],
+    #               [-s, c, f[1]],
+    #               [0, 0, 1]])
+    # above put in the frame of the origin, we want the frame of the block (intro to robotics pg 36)
     pts_array = np.array(pts).reshape(-1, 2)
-    theta = -f[2]
+    theta = f[2]
     c = cos(theta)
     s = sin(theta)
-    T = np.array([[c, -s, f[0]],
-                  [s, c, f[1]],
-                  [0, 0, 1]])
-    pts_ret = np.dot(T, np.vstack((pts_array.T, np.ones((1, pts_array.shape[0])))))
+    R = np.array([[c, -s],
+                  [s, c]])
+    f_from_b = np.dot(-R.transpose(), f[0:2])
+    T = np.vstack((np.hstack((R.transpose(), f_from_b)), np.array([0, 0, 1])))
+    pts_ret = np.dot(T, np.vstack((pts_array.transpose(), np.ones((1, pts_array.shape[0])))))
     return pts_ret[0:2, :].transpose()
 
 
 def plot_raw_object_pose(data_raw):
-    # this data needs processing, see the plot_raw data to understand helper functions
     # see preprocess _zero_initial_position function to understand how the data is preprocessed
-    # check the papers, I assume then that the 'origin' is the intial position of the object, i.e. the remaining way
-    # are deltas
-    # the object moves wrt the world frame, from the perspective of the world frame which is the object's initial position
+    # the world frame moves from the robot frame to the initial position of the block
 
     object = data_raw['object_pose']
     object = np.array(object)
     starttime = object[0, 0:1]
-    startx = object[0, 1:2]
-    starty = object[0, 2:3]
+    #  TODO: startx and starty should be handled within the function (f not as input)
+    startx = object[0, 1:2]*100  # cm
+    starty = object[0, 2:3]*100  # cm
     startpose = object[0, 3:4]
-    # print startx
-    # print starty
 
     timearray = object[:, 0:1] - starttime
-
-    # x_pos = (object[:, 1:2]-startx)*100 # in cm
-    # y_pos = (object[:, 2:3]-starty)*100 # in cm
+    timediff = (object[1:, 0:1] - object[0:-1, 0:1])  # 1: includes last element
     pose = object[:, 3:4] - startpose
 
-    pts = (object[:, 1:3])*100
-    f =np.array([startx, starty, startpose])
+    print timearray[0], timearray[-1], 'raw initial and final time'
+    print timediff, 'raw timediff'
+
+    pts = object[:, 1:3]*100  # cm
+    f = np.array([startx, starty, startpose])
     pts_world_frame2d = _transform_back_frame2d(pts, f)
-    startx = pts_world_frame2d[0, 0:1]
-    starty = pts_world_frame2d[0, 1:2]
 
-    x_pos = pts_world_frame2d[:, 0:1] - startx
-    y_pos = pts_world_frame2d[:, 1:2] - starty
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
 
-    f, ax = plt.subplots(1, sharex=True)
     plt.figure(1)
     ax1 = plt.subplot(311)
     ax1.plot(timearray, x_pos)
@@ -120,7 +123,6 @@ def plot_raw_object_pose(data_raw):
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('y_pos (cm)')
 
-
     ax2 = plt.subplot(313)
     ax2.plot(timearray, pose)
     ax2.set_xlabel('time (sec)')
@@ -131,15 +133,83 @@ def plot_raw_object_pose(data_raw):
     plt.show()
 
 
+def plot_processed_tip_pose(data_proc):
+    #  in preprocess script the tip pose is wrt initial object pose
+    tip = data_proc['tip']
+    dt = 1 / 180.0  # this value is set in preprocess.py
+    starttime = 0.0
+    endtime = (np.shape(tip)[0]) * dt
+    timearray = np.arange(0, endtime, dt) - starttime
+
+    print timearray[0], timearray[-1], 'processed initial and final time'
+    print dt, 'timediff'
+
+    tip = np.array(tip)
+    x_pos = tip[:, 0:1]*100 # in cm
+    y_pos = tip[:, 1:2]*100 # in cm
+
+    plt.figure(1)
+    ax1 = plt.subplot(211)
+    ax1.plot(timearray, x_pos)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
+
+    ax2 = plt.subplot(212)
+    ax2.plot(timearray, y_pos)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('y_pos (cm)')
+
+    ax1.set_title('tip position processed data')
+
+    plt.show()
 
 
+def plot_raw_tip_pose(data_raw):
+    # see preprocess _zero_initial_position function to understand how the data is preprocessed
+    # the world frame moves from the robot frame to the initial position of the block
+    # not going to worry about the pose for now although the pose is available
+    object = data_raw['object_pose']
+    object = np.array(object)
+    startx = object[0, 1:2]*100  # cm
+    starty = object[0, 2:3]*100  # cm
+    startpose = object[0, 3:4]
 
-# def plot_tip_pose(data_raw, data_proc):
+    tip = data_raw['tip_pose']
+    tip = np.array(tip)
+    starttime = tip[0, 0:1]
 
+    timearray = tip[:, 0:1] - starttime
+    timediff = (tip[1:, 0:1] - tip[0:-1, 0:1])  # 1: includes last element
 
+    print timearray[0], timearray[-1], 'raw initial and final time'
+    print timediff, 'raw timediff'
+
+    pts = tip[:, 1:3]*100  # cm
+    f = np.array([startx, starty, startpose])  # cm
+    pts_world_frame2d = _transform_back_frame2d(pts, f)  # put it all in the perspective of the block
+
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
+
+    plt.figure(1)
+    ax1 = plt.subplot(211)
+    ax1.plot(timearray, x_pos)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
+
+    ax2 = plt.subplot(212)
+    ax2.plot(timearray, y_pos)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('y_pos (cm)')
+
+    ax1.set_title('object position raw data')
+
+    plt.show()
 
 
 def main(argv):
+    # TODO: need to deal with forces as well
+    # TODO: need to run over many scripts including scripts with acceleration
     # if len(argv) < 2:
     #     print 'Usage: plot_raw_json.py *.h5 tip_speed_profile/forceprofile/snapshots'
     #     return
@@ -153,13 +223,12 @@ def main(argv):
     # figname = h5_filepath.replace('.h5', '.png')
     shape_id = 'rect1'
 
-    # data_readout(data_raw, data_proc)
+    data_readout(data_raw, data_proc)
     # plot_processed_object_pose(data_proc)
     plot_raw_object_pose(data_raw)
-
-    # plot(data, shape_id, figname)
-    # plot_speed_profile(data, shape_id, figname, multidim=True)
-
+    # TODO: is this reasonable? check block sizes
+    # plot_processed_tip_pose(data_proc)
+    # plot_raw_tip_pose(data_raw)
     data_raw.close()
     data_proc.close()
 
