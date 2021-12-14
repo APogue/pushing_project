@@ -132,6 +132,32 @@ def plot_speed_profile(data, shape_id, figfname, multidim):
     ax.set_ylim(0, .016)
     plt.show()
 
+
+def plot_force_profile(data):
+    # for several files: plot the unrotated raw data
+    # plot the unrotated processed data
+    # assuming the processed data is in a different frame the two should be different
+    # then manually process the raw data (using the rot function here) to look like the processed data
+
+    force_obj = data['force']
+
+    dt = 1/180.0
+    starttime = 0.0
+    endtime = np.shape(force_obj)[0]*dt
+    timearray = np.arange(0, endtime, dt) - starttime
+
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(timearray, np.array(force_obj)[:, 0])
+    axarr[1].plot(timearray, np.array(force_obj)[:, 1])
+    axarr[1].set_xlabel('time (sec)')
+    axarr[0].set_ylabel('force x (N)')
+    axarr[1].set_ylabel('force y (N)')
+    axarr[0].set_title('Processed Force Data')
+    # TODO: find a better way to do the figure size
+    f.set_figheight(6)
+    f.set_figwidth(8)
+    plt.show()
+
 def main(argv):
     if len(argv) < 2:
         print 'Usage: plot_raw_json.py *.h5 tip_speed_profile/forceprofile/snapshots'
@@ -144,7 +170,8 @@ def main(argv):
     shape_id = 'rect1'
 
     # plot(data, shape_id, figname)
-    plot_speed_profile(data, shape_id, figname, multidim=True)
+    # plot_speed_profile(data, shape_id, figname, multidim=True)
+    plot_force_profile(data)
     data.close()
 
 

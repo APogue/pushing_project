@@ -15,11 +15,15 @@ from config.helper import *
 # tip_pose: time (s), x, y position (meters) wrt robot frame, orientation (?) tip in rad
 # object_pose: time (s), x, y position (meters) wrt robot frame, orientation (?) tip in rad
 # ft_wrench: time (s), force x, y (Newtons), torque z (Newton*meter)
+# looks like the processed data eliminates the torque data (there is no torque? Check the torques on several files)
 
 def data_readout(data_raw, data_proc):
 
     print data_raw.keys()
     print data_proc.keys()
+    print data_raw['ft_wrench']
+    print data_proc['force']
+
     print data_raw['object_pose'], 'object pose'
     print data_proc['object']
 
@@ -206,6 +210,72 @@ def plot_raw_tip_pose(data_raw):
 
     plt.show()
 
+def plot_processed_force(data_proc):
+    # for several files: plot the unrotated raw data
+    # plot the unrotated processed data
+    # assuming the processed data is in a different frame the two should be different
+    # then manually process the raw data (using the rot function here) to look like the processed data
+
+    force_obj = data_proc['force']
+
+    dt = 1 / 180.0
+    starttime = 0.0
+    endtime = np.shape(force_obj)[0] * dt
+    timearray = np.arange(0, endtime, dt) - starttime
+
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(timearray, np.array(force_obj)[:, 0])
+    axarr[1].plot(timearray, np.array(force_obj)[:, 1])
+    axarr[1].set_xlabel('time (sec)')
+    axarr[0].set_ylabel('force x (N)')
+    axarr[1].set_ylabel('force y (N)')
+    axarr[0].set_title('Processed Force Data')
+    # TODO: find a better way to do the figure size
+    f.set_figheight(6)
+    f.set_figwidth(8)
+    plt.show()
+
+def plot_raw_force(data_raw):
+    # the plots aren't matching up this is likely a transformation issue like the tip, and object pose
+    ft_wrench = data_raw['ft_wrench']
+
+    object = data_raw['object_pose']
+    object = np.array(object)
+    startx = object[0, 1:2] # m
+    starty = object[0, 2:3] # m
+    startpose = object[0, 3:4]
+
+    force = data_raw['ft_wrench']
+    force= np.array(force)
+    starttime = force[0, 0:1]
+
+    timearray = force[:, 0:1] - starttime
+    timediff = (force[1:, 0:1] - force[0:-1, 0:1])  # 1: includes last element
+
+    print timearray[0], timearray[-1], 'raw initial and final time'
+    print timediff, 'raw timediff'
+
+    pts = force[:, 1:3]   # m
+    f = np.array([startx, starty, startpose])  # cm
+    pts_world_frame2d = _transform_back_frame2d(pts, f)  # put it all in the perspective of the block
+
+    x_force = pts_world_frame2d[:, 0:1]
+    y_force = pts_world_frame2d[:, 1:2]
+
+    fig, (ax1, ax2) = plt.subplots(2)
+    fig.set_size_inches(8, 6)
+    # ax1 = plt.subplot(211)
+    ax1.plot(timearray, x_force)
+    ax1.set_ylabel('force x (N)')
+
+    # ax2 = plt.subplot(212)
+    ax2.plot(timearray, y_force)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('force y (cm)')
+
+    ax1.set_title('Raw Force Data')
+
+    plt.show()
 
 def main(argv):
     # TODO: need to deal with forces as well
@@ -225,28 +295,19 @@ def main(argv):
 
     # data_readout(data_raw, data_proc)
     # plot_processed_object_pose(data_proc)
-    plot_raw_object_pose(data_raw)
+    # plot_raw_object_pose(data_raw)
     #
     # # TODO: is this reasonable? check block sizes (add to the blog post)
     # plot_processed_tip_pose(data_proc)
     # plot_raw_tip_pose(data_raw)
+    # plot_processed_force(data_proc)
+    plot_raw_force(data_raw)
     # data_raw.close()
     # data_proc.close()
 
-    # length data
-    # initial and final time
-    # time step
-    # tip speed
-    # pose snapshots
-    # object position
-    # tip position
-    # png of rotation stuff
-    # object photo from the mcube website
-
-
 if __name__=='__main__':
     # TODO: currently dumps output into input file
-
+    # the script takes the unprocessed file path as the first argument
     import sys
     main(sys.argv)
 

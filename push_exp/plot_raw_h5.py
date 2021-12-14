@@ -131,7 +131,6 @@ def plot_force_profile(data, shape_id, figfname, multidim):
     force_obj = np.dot(invrotT0, pts_array)
     force_obj = force_obj[0:3, :].transpose()
 
-    
     multidim = True
     starttime = data['ft_wrench'][0][0]
     timearray = np.array(data['ft_wrench'])[:, 0] - starttime
