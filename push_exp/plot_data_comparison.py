@@ -223,15 +223,15 @@ def main(argv):
     # figname = h5_filepath.replace('.h5', '.png')
     shape_id = 'rect1'
 
-    data_readout(data_raw, data_proc)
-    plot_processed_object_pose(data_proc)
+    # data_readout(data_raw, data_proc)
+    # plot_processed_object_pose(data_proc)
     plot_raw_object_pose(data_raw)
-
-    # TODO: is this reasonable? check block sizes (add to the blog post)
-    plot_processed_tip_pose(data_proc)
-    plot_raw_tip_pose(data_raw)
-    data_raw.close()
-    data_proc.close()
+    #
+    # # TODO: is this reasonable? check block sizes (add to the blog post)
+    # plot_processed_tip_pose(data_proc)
+    # plot_raw_tip_pose(data_raw)
+    # data_raw.close()
+    # data_proc.close()
 
     # length data
     # initial and final time

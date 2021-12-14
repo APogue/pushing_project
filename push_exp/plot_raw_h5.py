@@ -114,47 +114,58 @@ def plot(data, shape_id, figfname):
         plt.savefig(figfname)
 
 def plot_force_profile(data, shape_id, figfname, multidim):
+
+    # transform to object frame
+    #force_obj = [np.dot(invrotT0, np.array(ft_wrench[1:4] + [1])).tolist() for ft_wrench in data['ft_wrench']]
+    #force_obj = [np.dot(invrotT0, np.array([1,2,3,4])).tolist() for ft_wrench in data['ft_wrench']]
+
     object_pose = data['object_pose']
+    # TODO: what is this invrotT0? rt now it's identity
     invrotT0 = np.linalg.inv(rotmatrix_from_quat(object_pose[0][4:8]))
-    
+    # time in sec, force in x and y Newton, and torque in z Newton*meters
+    ft_wrench = data['ft_wrench']
     
     # transform to object frame
-    force_obj = [np.dot(invrotT0, np.array(ft_wrench[1:4] + [1])).tolist() for ft_wrench in data['ft_wrench']]
+    pts = ft_wrench[:, 1:4]
+    pts_array = np.vstack((pts.T, np.ones((1, pts.shape[0]))))
+    force_obj = np.dot(invrotT0, pts_array)
+    force_obj = force_obj[0:3, :].transpose()
+
     
     multidim = True
     starttime = data['ft_wrench'][0][0]
-    timearray = np.array(data['ft_wrench'])[:,0] - starttime
+    timearray = np.array(data['ft_wrench'])[:, 0] - starttime
     if multidim:
         f, axarr = plt.subplots(3, sharex = True)
         axarr[0].plot(timearray, np.array(force_obj)[:, 0])
         axarr[1].plot(timearray, np.array(force_obj)[:, 1])
         axarr[2].plot(timearray, np.array(force_obj)[:, 2])
-        axarr[0].set_xlabel('time (sec)')
-        axarr[0].set_ylabel('force (N)')
-        
+        axarr[2].set_xlabel('time (sec)')
+        axarr[0].set_ylabel('force x (N)')
+        axarr[1].set_ylabel('force y (N)')
+        axarr[2].set_ylabel('torque z (N*m)')
+        axarr[0].set_title('Raw Force Data')
+        # TODO: find a better way to do the figure size
+        f.set_figheight(6)
+        f.set_figwidth(8)
     else:
         f, ax = plt.subplots(1, sharex = True)
-        ax.plot(np.array(timearray, np.array(force_obj)[:,1]))
+        ax.plot(np.array(timearray, np.array(force_obj)[:, 1]))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel('force (N)')
     plt.show()
     
 def plot_speed_profile(data, shape_id, figfname, multidim):
     tip_pose = data['tip_pose']
-    
-    
-    # transform to object frame
-    #force_obj = [np.dot(invrotT0, np.array(ft_wrench[1:4] + [1])).tolist() for ft_wrench in data['ft_wrench']]
-    #force_obj = [np.dot(invrotT0, np.array([1,2,3,4])).tolist() for ft_wrench in data['ft_wrench']]
-    
+
     starttime = tip_pose[0][0]
-    timearray = np.array(tip_pose)[:,0] - starttime
+    timearray = np.array(tip_pose)[:, 0] - starttime
     print(np.size(timearray))
     tip_pose = np.array(tip_pose)
-    timediff = (tip_pose[1:,0:1] - tip_pose[0:-1,0:1])
+    timediff = (tip_pose[1:, 0:1] - tip_pose[0:-1, 0:1])
     
-    tip_vel = (tip_pose[1:,1:3] - tip_pose[0:-1,1:3]) / np.hstack((timediff, timediff))
-    tip_speed = np.sqrt(tip_vel[:,0:1]**2 + tip_vel[:,1:2]**2)
+    tip_vel = (tip_pose[1:, 1:3] - tip_pose[0:-1, 1:3]) / np.hstack((timediff, timediff))
+    tip_speed = np.sqrt(tip_vel[:, 0:1]**2 + tip_vel[:, 1:2]**2)
     print(np.shape(tip_pose))
     f, ax = plt.subplots(1, sharex = True)
     ax.plot(timearray[1:], tip_speed)
@@ -162,7 +173,6 @@ def plot_speed_profile(data, shape_id, figfname, multidim):
     ax.set_ylabel('speed (m/s)')
     ax.set_ylim(0, .016)
     plt.show()
-
 
 
 def main(argv):
