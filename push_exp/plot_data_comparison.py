@@ -300,7 +300,7 @@ def main(argv):
     # # TODO: is this reasonable? check block sizes (add to the blog post)
     # plot_processed_tip_pose(data_proc)
     # plot_raw_tip_pose(data_raw)
-    # plot_processed_force(data_proc)
+    plot_processed_force(data_proc)
     plot_raw_force(data_raw)
     # data_raw.close()
     # data_proc.close()
