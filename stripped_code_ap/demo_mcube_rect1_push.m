@@ -35,28 +35,11 @@ support_pts = GridSupportPoint(num_supports_pts, options_support_pts); % N*2.
 num_supports_pts = size(support_pts, 1);
 options_pressure.mode = 'uniform';
 pressure_weights = AssignPressure(support_pts, options_pressure);
+ls_type = 'quadratic';
 %figure, plot(support_pts(:,1), support_pts(:,2), '^');
 %axis equal;
 %drawnow;
-% limit surface fitting based on pressure distribution.
-ls_type = 'quadratic';
-ls_coeff_test = [0.146370788404678
-   0.113197964421117
-   0.278638393573682
-   0.058360895230491
-   0.026172121870120
-  -0.039808858375788
-   0.052015077985983
-  -0.120560048277458
-   0.073685879884696
-   0.177299808465202
-   0.620482600921318
-   1.024614815650334
-   0.016548222766705
-   0.029731679316744
-  -0.278834553794510];
-% pushobj = PushedObject([],[],shape_info,ls_type, ls_coeff_test);
-% Uncomment the following two lines if you first run this file. 
+% limit surface fitting based on pressure distribution. 
 pushobj = PushedObject(support_pts', pressure_weights, shape_info, ls_type);
 pushobj.FitLS(ls_type, 150, 0.1);
 % Specify the initial pose of the object.

@@ -65,9 +65,6 @@ classdef ForwardSimulationCombinedState < handle
         % Resolves contact at time t.
         % 1) Compute the contact points and velocity.
         % 2) If single point contact, call pushing model.
-        % 3) If multiple point contacts, detect if jammed or properly
-        % grasped. Otherwise, the object can be moved, return the movement
-        % of the object.
         function [contact_info] = ContactResolution(obj, hand_q, hand_qdot, contact_values)
             contact_info.hand_q = hand_q;
             contact_info.hand_qdot = hand_qdot;
@@ -85,48 +82,18 @@ classdef ForwardSimulationCombinedState < handle
             %contact_info.vel_contact = zeros(2, contact_info.num_fingers_contact);
             %contact_info.outward_normal_contact = zeros(2, contact_info.num_fingers_contact);
             
-            if (contact_info.num_fingers_contact == 1)
-                % Get the position, velocity and contact normal of the touching finger.
-                [~, contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact] = ...
-                obj.pushobj.GetRoundFingerContactInfo(contact_info.finger_carts_contact(1:2), obj.hand.finger_radius, contact_info.finger_twists_contact);
-                % Compute the object twist and contact mode using the pushing motion model.
-                [contact_info.twist_local, contact_info.wrench_local, contact_info.contact_mode] = ...
-                       obj.pushobj.ComputeVelGivenPointRoundFingerPush(contact_info.pt_contact,  ...
-                       contact_info.vel_contact, contact_info.outward_normal_contact, obj.mu);
-                contact_info.obj_status = 'pushed';
-                contact_info.obj_config_dot = obj.GetObjectQDotGivenBodyTwist(contact_info.twist_local); 
+     
+            % Get the position, velocity and contact normal of the touching finger.
+            [~, contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact] = ...
+            obj.pushobj.GetRoundFingerContactInfo(contact_info.finger_carts_contact(1:2), obj.hand.finger_radius, contact_info.finger_twists_contact);
+            % Compute the object twist and contact mode using the pushing motion model.
+            [contact_info.twist_local, contact_info.wrench_local, contact_info.contact_mode] = ...
+                    obj.pushobj.ComputeVelGivenPointRoundFingerPush(contact_info.pt_contact,  ...
+                    contact_info.vel_contact, contact_info.outward_normal_contact, obj.mu);
+            contact_info.obj_status = 'pushed';
+            contact_info.obj_config_dot = obj.GetObjectQDotGivenBodyTwist(contact_info.twist_local); 
 
-            elseif (contact_info.num_fingers_contact > 1)
-                % Multi-contact resolution.
-                % Get the position, velocity and contact normal of the touching fingers. 
-                [~, contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact] = ...
-                obj.pushobj.GetRoundFingerContactInfo(contact_info.finger_carts_contact(1:2, :), obj.hand.finger_radius, contact_info.finger_twists_contact);
-                %contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact
-                % Compute the twist, wrench if objects will move or knowing
-                % objects will be jammed. 
-                [contact_info.twist_local, contact_info.wrench_local, flag_jammed, flag_converged] = obj.pushobj.ComputeVelGivenMultiPointRoundFingerPush(...
-                 contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact, obj.mu);
-                %contact_info.twist_local
-                if ~flag_converged
-                    fprintf('The multi-contact complementarity problem did not converge!\n');
-                end
-                if ~flag_jammed
-                    contact_info.obj_status = 'pushed';
-                    contact_info.obj_config_dot = obj.GetObjectQDotGivenBodyTwist(contact_info.twist_local); 
-                    %contact_info.obj_config_dot
-                elseif contact_info.num_fingers_contact == obj.hand.num_fingers
-                    contact_info.obj_status = 'grasped';
-                    contact_info.obj_config_dot = zeros(3,1);
-                else
-                    contact_info.obj_status = 'jammed';
-                    contact_info.obj_config_dot = zeros(3,1);
-                end
-                %contact_info.obj_status
-                %contact_info.obj_config_dot
-                %obj.pushobj.pose
-            else
-                %error('ODE detects contact yet no contact has been identified.')
-            end
+
         end
              
         function [qdot] = GetObjectQDotGivenBodyTwist(obj, twist_body) 
@@ -135,12 +102,6 @@ classdef ForwardSimulationCombinedState < handle
             qdot = [obj_center_vel(1:2); twist_body(3)];
         end
         
-%         % Update object pose given object body twist, dt equals dt_collision.
-%         function [obj] = UpdateObjectPoseGivenBodyTwist(obj, twist_body)
-%               nxt_homog_trans =  SE2Algebra.GetHomogTransfFromCartesianPose(obj.pushobj.pose) * ...
-%               SE2Algebra.GetExponentialMapGivenTwistVec(twist_body * obj.dt_collision);
-%               obj.pushobj.pose = SE2Algebra.GetCartesianPoseFromHomogTransf(nxt_homog_trans);
-%         end
         
          % Contact event detection.
         function [values, isterminal, direction] = ContactEvent(obj, t, hand_config)

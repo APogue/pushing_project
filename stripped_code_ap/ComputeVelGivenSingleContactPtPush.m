@@ -9,11 +9,8 @@ if strcmp(contact_mode,'separation')
     F = zeros(3,1);
     V = zeros(3,1);
 elseif strcmp(contact_mode,'sticking')
-    if strcmp(LC_type, 'poly4')
-        [F, V] = GetVelGivenStickingPtPushPolyLC(Vp, Pt, LC_coeffs, pho);
-    elseif strcmp(LC_type, 'quadratic')
-        [F, V] = GetVelGivenStickingPtPushEllipsoidLC(Vp, Pt, LC_coeffs, pho);
-    end
+    [F, V] = GetVelGivenStickingPtPushEllipsoidLC(Vp, Pt, LC_coeffs, pho);
+  
 else
     [fc_edges] = ComputeFrictionConeEdges(Pt, Ct_normal, Ct_mu, pho);
     if strcmp(contact_mode,'leftsliding')
@@ -21,11 +18,7 @@ else
     else % right sliding.
         F = fc_edges(:,2);
     end
-    if strcmp(LC_type, 'poly4')
-        V = GetVelFrom4thOrderPoly(LC_coeffs, F)';
-    elseif strcmp(LC_type, 'quadratic')
         V = LC_coeffs * F;
-    end
     % Compute the right scale of V such that normal velocity is the same.
     B = [1, 0, -Pt(2)/pho;
      0, 1, Pt(1)/pho];

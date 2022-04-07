@@ -3,16 +3,8 @@ classdef PushedObject < matlab.mixin.Copyable
    properties
       % Limit surface related.
       ls_coeffs
-      ls_type
+      ls_type = 'quadratic'
       ls_coeffs_cp
-      % The psd Q decomposition matrix for poly4 from the optimization
-      % result. This is used for noisy sampling of SOS-Convex poly4s. 
-      Q_poly4
-      % Coefficients for poly4 optimization program.  See
-      % get_poly4_parameters for clarification.
-      E_poly4_opt
-      A_poly4_opt
-      B_poly4_opt
       % Pressure related.
       support_pts  %2*N
       pressure_weights  % N*1
@@ -49,7 +41,6 @@ classdef PushedObject < matlab.mixin.Copyable
             % The default symmetry order is 1.
             obj.nsides_symmetry = 1;
             obj.noise_df = 50;
-            [obj.E_poly4_opt, obj.A_poly4_opt, obj.B_poly4_opt] = get_poly4_parameters();
             if strcmp(obj.shape_type,'polygon')
                 obj.shape_vertices = shape_info.shape_vertices;
             else
@@ -65,10 +56,7 @@ classdef PushedObject < matlab.mixin.Copyable
             end
        end
         
-       function [obj] = FitLS(obj, ls_type, num_cors, r_facet, flag_plot)
-            if (nargin < 2)
-                ls_type = 'quadratic';
-            end
+       function [obj] = FitLS(obj,ls_type, num_cors, r_facet, flag_plot)
             if (nargin < 3)
                 num_cors = 200;
             end
@@ -84,23 +72,10 @@ classdef PushedObject < matlab.mixin.Copyable
        
        % For now, the noise injection is only for ellipsoid/quadratic model.
        function [] = InjectLSNoise(obj)
-           if strcmp(obj.ls_type, 'quadratic')
-                % Larger df is smaller deviation.
-                df = obj.noise_df; 
-                obj.ls_coeffs = wishrnd(obj.ls_coeffs_cp,df)/df;
-           elseif strcmp(obj.ls_type, 'poly4')
-                Q_noisy = wishrnd(obj.Q_poly4, obj.noise_df) / obj.noise_df;
-                %display(obj.Q_poly4)
-                %alpha = 0.1;
-                %Q_noisy = alpha * obj.Q_poly4 + (1-alpha) * Q_noisy;
-                %Q_noisy = Q_noisy + 1e-1 * eye(9);
-                [obj.ls_coeffs] = GetPoly4CoefficientFromDecompositionMatrix(Q_noisy, obj.A_poly4_opt, obj.B_poly4_opt);
-                %filter_indices = [4,5,6,7,8,9,13,14,15];
-                %obj.ls_coeffs(filter_indices) = obj.ls_coeffs_cp(filter_indices);
-                %obj.ls_coeffs(filter_indices) = zeros(length(filter_indices), 1);
-                %display(obj.ls_coeffs);
-                %display(obj.ls_coeffs_cp);
-           end
+           strcmp(obj.ls_type, 'quadratic')
+           % Larger df is smaller deviation.
+           df = obj.noise_df; 
+           obj.ls_coeffs = wishrnd(obj.ls_coeffs_cp,df)/df;
        end
        
        function [obj] = SetWrenchTwistSamplingConfig(obj, num_cors, r_facet)
@@ -135,12 +110,7 @@ classdef PushedObject < matlab.mixin.Copyable
             % data point. Twists are additionally normalized to unit
             % vector.
             [V, F] = NormalizeForceAndVelocities(V, F, obj.pho);
-            if strcmp(obj.ls_type, 'quadratic')
-                [obj.ls_coeffs, xi, delta, pred_V_dir, s] = FitEllipsoidForceVelocityCVX(F', V', 1, 2, 1, flag_plot);
-            elseif strcmp(obj.ls_type, 'poly4')
-                [obj.ls_coeffs, xi, delta, pred_V_dir, s, obj.Q_poly4] = Fit4thOrderPolyCVX(F', V', 1, 2, 1, flag_plot);
-                %display(obj.Q_poly4);
-            end
+            [obj.ls_coeffs, xi, delta, pred_V_dir, s] = FitEllipsoidForceVelocityCVX(F', V', 1, 2, 1, flag_plot);
             obj.ls_coeffs_cp = obj.ls_coeffs;
        end
            
@@ -287,88 +257,6 @@ classdef PushedObject < matlab.mixin.Copyable
         wrench_load_local(3) = wrench_load_local(3) * obj.pho;
         twist_local(3) = twist_local(3) / obj.pho;  
         
-      end
-      
-      function [twist, wrench, flag_jammed, flag_converged] = ComputeVelGivenMultiPointRoundFingerPush(obj, ...
-              pts_global, vels_global, outward_normals_global, mu)
-        % The multi-contact solution by solving a (iterated) LCP problem.
-        % Change to local object frame.
-        % Output un-normalized. 3rd component of wrench is Nm. 3rd of twist
-        % is radian/s. 
-        vels_local = obj.GetVectorInLocalFrame(vels_global);
-        pts_local = obj.GetVectorInLocalFrame(bsxfun(@minus, pts_global, obj.pose(1:2)));
-        outward_normals_local = obj.GetVectorInLocalFrame(outward_normals_global);
-        [wrench, twist, flag_jammed, flag_converged] = ComputeVelGivenMultiContactPtPush(...
-            vels_local, pts_local, outward_normals_local, mu, obj.pho, obj.ls_coeffs, obj.ls_type);
-        % Un-normalize the third components.
-        wrench(3) = wrench(3) * obj.pho;
-        twist(3) = twist(3) / obj.pho;
-      end
-      
-      function [flag_jammed] = CheckForTwoContactsJammingGeometry(obj, pts, out_normals, mus, flag_plot)
-        % This function checks for jamming given two contact points.
-        % Here we assume the contacts are position-controlled and are able
-        % to apply infinite force to the object. 
-        % It checks if the line between the two contacts lines in the 2
-        % friction cones. 
-        % Inputs: pt: contact points column vectors. 2*2. 
-        % out_normals: outward normals at each contact point. 2*2. 
-        % mus: the coefficient of frictions at the two contact points.
-        % Output: boolean variable returning whether the object will be
-        % jammed or not.
-        if nargin < 5
-            flag_plot = false;
-        end
-        vec_pt_12 = pts(:,2) - pts(:,1);
-        pho_dummy = 1;
-        fc_edges = zeros(3,4);
-        fc_edges(:,1:2) = ComputeFrictionConeEdges(pts(:,1), out_normals(:,1), mus(1), pho_dummy);
-        fc_edges(:,3:4) = ComputeFrictionConeEdges(pts(:,2), out_normals(:,2), mus(2), pho_dummy);
-        k = zeros(4,1);
-        flag_jammed = true;
-        for i = 1:1:2
-            vec_pt = (-1)^(i-1) * vec_pt_12;
-            k(2*i-1) = vec_pt(1) * fc_edges(2, 2*i-1) - vec_pt(2) * fc_edges(1, 2*i-1);
-            k(2*i) = vec_pt(1) * fc_edges(2, 2*i) - vec_pt(2) * fc_edges(1, 2*i);
-            if ~(k(2*i-1) >= 0 && k(2*i) <=0)
-                flag_jammed = false;
-            end
-            %arrow_length = obj.shape_parameters.radius * 0.5;
-            arrow_length = obj.pho * 0.5;
-            if (flag_plot)
-                hold on;
-                plot([pts(1,i), pts(1,i) + fc_edges(1,2*i-1) * arrow_length], [pts(2,i), pts(2,i) + fc_edges(2,2*i-1) * arrow_length], 'b-');
-                plot([pts(1,i), pts(1,i) + fc_edges(1,2*i) * arrow_length], [pts(2,i), pts(2,i) + fc_edges(2,2*i) * arrow_length], 'b-');
-            end
-        end     
-      end
-      
-      function [flag_cagged, flag_in, flag_on] = CheckForCagingGeometry(obj, pts, finger_radius)
-          % This function checks geometric conditions for fingers caging the
-          % object.
-          % Input: pts: the contact points column vectors.
-          % Output: flag_cagged, whether the object is being cagged or not.
-          % flag_in: whether the object is inside the caging boundary.
-          % flag_on: whether the object is on the caging boundary.
-          n_pts = size(pts, 2);
-          flag_cagged = false;
-          flag_in = false;
-          flag_on = false;
-          eps_dist = finger_radius / 4;
-          pts_tips = pts;
-          % For now, let's start with 3 fingers caging a circle. 
-          if (n_pts == 3 && strcmp(obj.shape_type, 'circle'))
-            % Compute pairwise distance between the contact points.
-            dist_pts = pdist(pts_tips');
-            cage_tri_edge = 2 * (obj.shape_parameters.radius + sqrt(3)/2.0 * finger_radius);
-            %2 * (obj.shape_parameters.radius + sqrt(3)/2.0 * finger_radius)
-            % Check in the caging triangle is formed or not.
-            %flag_triangle = ((sum(dist_pts <= ...
-            %    2 * (obj.shape_parameters.radius + sqrt(3)/2.0 * finger_radius + eps_dist))) == n_pts);
-            flag_triangle = (sum(dist_pts <= cage_tri_edge) == n_pts);
-            [flag_in, flag_on] = inpolygon(obj.pose(1), obj.pose(2), pts(1,:), pts(2,:));
-            flag_cagged = flag_in & flag_triangle;
-          end
       end
    end
 end
