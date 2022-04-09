@@ -18,6 +18,20 @@ tip_pose = [tip_pt,zeros(length(t_q), 1)];
 % h5create('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5','/force',size(force))
 % h5write('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5','/force',force)
 
+% 1. object pose and tip pose in matlab and python (from matlab file). Transfer worked? 
+% 2. rotate object pose and tip pose (from matlab h5) and check with processed data
+% the interpolation may have messed up the beginning and end points, so
+% 3. also plot the tip and object pre-interpolated data and check with the
+% python processed or unprocessed datab (can bring it all over to matlab or
+% not)
+% find an error metric (from the papers) and port the simulated data over,
+% then check the error with the processed data, might make more sense to
+% check it with his processed data, because you processed data looks a bit
+% difference. 
+% when you build your own sim files in matlab then you can run your own
+% processed data through it
+
+
 
 dt = 1 / 180.0;  
 starttime = 0.0;
