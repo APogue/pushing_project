@@ -24,11 +24,11 @@ starttime = 0.0;
 endtime =size(tip_pose,1) * dt;
 timearray = [0:dt:endtime-dt];
 length(timearray)
-plot(timearray, object_pose(:,1)*100)
+plot(timearray, object_pose(:,2)*100)
 title('tip position raw data matlab')
 
-h5disp('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5')
-h5info('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5')
+% h5disp('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5')
+% h5info('a=0_v=10_i=0.000_s=0.000_t=0.698_matlab.h5')
 tip_radius = 0.00475;
 shape_vertices = get_shape(shape_id);
 shape_vertices(end,:) = [];

@@ -78,11 +78,8 @@ classdef ForwardSimulationCombinedState < handle
             contact_info.num_fingers_contact = length(contact_info.finger_index_contact);
             contact_info.finger_carts_contact = finger_carts(:, contact_info.finger_index_contact);
             contact_info.finger_twists_contact = finger_twists(:, contact_info.finger_index_contact);
-            %contact_info.pt_contact = zeros(2, contact_info.num_fingers_contact);
-            %contact_info.vel_contact = zeros(2, contact_info.num_fingers_contact);
-            %contact_info.outward_normal_contact = zeros(2, contact_info.num_fingers_contact);
-            
-     
+
+                 
             % Get the position, velocity and contact normal of the touching finger.
             [~, contact_info.pt_contact, contact_info.vel_contact, contact_info.outward_normal_contact] = ...
             obj.pushobj.GetRoundFingerContactInfo(contact_info.finger_carts_contact(1:2), obj.hand.finger_radius, contact_info.finger_twists_contact);
@@ -92,7 +89,6 @@ classdef ForwardSimulationCombinedState < handle
                     contact_info.vel_contact, contact_info.outward_normal_contact, obj.mu);
             contact_info.obj_status = 'pushed';
             contact_info.obj_config_dot = obj.GetObjectQDotGivenBodyTwist(contact_info.twist_local); 
-
 
         end
              

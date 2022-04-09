@@ -1,15 +1,20 @@
-# Alexie Pogue, Nov 2021
+# Alexie Pogue, April 2022
 # Plot processed trajectories
 
 import h5py
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import pandas as pd
 from config.shape_db import ShapeDB
 from tf import transformations as tfm
 from ik.helper import *
 from config.helper import *
 
-# this is a data comparison between the raw and processed dataset files
+# this is a data comparison between processed dataset files and the interpolated (and processed?) MATLAB files
+# TODO: compare between the processed dataset files and the MATLAB prediction file
+# what are the error metrics to do this?
+
+
 # what is in the data
 # raw data
 # tip_pose: time (s), x, y position (meters) wrt robot frame, orientation (?) tip in rad
@@ -95,26 +100,32 @@ def plot_raw_object_pose(data_raw):
     # the world frame moves from the robot frame to the initial position of the block
 
     object = data_raw['object_pose']
-    object = np.array(object)
-    starttime = object[0, 0:1]
+    object = np.array(object).transpose()
     #  TODO: startx and starty should be handled within the function (f not as input)
-    startx = object[0, 1:2]*100  # cm
-    starty = object[0, 2:3]*100  # cm
-    startpose = object[0, 3:4]
+    startx = object[0, 0:1]*100  # cm
+    starty = object[0, 1:2]*100  # cm
+    startpose = object[0, 2:3]
 
-    timearray = object[:, 0:1] - starttime
-    timediff = (object[1:, 0:1] - object[0:-1, 0:1])  # 1: includes last element
-    pose = object[:, 3:4] - startpose
+    #  in preprocess script the tip pose is wrt initial object pose
+    tip = data_raw['tip_pose']
+    tip = np.array(tip).transpose()
+    dt = 1 / 180.0  # this value is set in preprocess.py
+    starttime = 0.0
+    endtime = (np.shape(tip)[0]) * dt
+    timearray = np.arange(0, endtime, dt) - starttime
 
+    pose = object[:, 2:3] - startpose
     print timearray[0], timearray[-1], 'raw initial and final time'
     # print timediff, 'raw timediff'
 
-    pts = object[:, 1:3]*100  # cm
+    pts = object[:, 0:2]*100  # cm
     f = np.array([startx, starty, startpose])
-    pts_world_frame2d = _transform_back_frame2d(pts, f)
+    # pts_world_frame2d = _transform_back_frame2d(pts, f)
 
-    x_pos = pts_world_frame2d[:, 0:1]
-    y_pos = pts_world_frame2d[:, 1:2]
+    # x_pos = pts_world_frame2d[:, 0:1]
+    # y_pos = pts_world_frame2d[:, 1:2]
+    x_pos = pts[:, 0:1]
+    y_pos = pts[:, 1:2]
 
     plt.figure(1)
     ax1 = plt.subplot(311)
@@ -128,7 +139,7 @@ def plot_raw_object_pose(data_raw):
     ax2.set_ylabel('y_pos (cm)')
 
     ax2 = plt.subplot(313)
-    ax2.plot(timearray, pose)
+    ax2.plot(timearray, list(pose))
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('pose (rad)')
 
@@ -146,6 +157,7 @@ def plot_processed_tip_pose(data_proc):
     timearray = np.arange(0, endtime, dt) - starttime
 
     print timearray[0], timearray[-1], 'processed initial and final time'
+    print len(tip)
     # print dt, 'timediff'
 
     tip = np.array(tip)
@@ -172,29 +184,30 @@ def plot_raw_tip_pose(data_raw):
     # see preprocess _zero_initial_position function to understand how the data is preprocessed
     # the world frame moves from the robot frame to the initial position of the block
     # not going to worry about the pose for now although the pose is available
-    object = data_raw['object_pose']
-    object = np.array(object)
-    startx = object[0, 1:2]*100  # cm
-    starty = object[0, 2:3]*100  # cm
-    startpose = object[0, 3:4]
 
+    #  in preprocess script the tip pose is wrt initial object pose
     tip = data_raw['tip_pose']
-    tip = np.array(tip)
-    starttime = tip[0, 0:1]
+    tip = np.array(tip).transpose()
+    dt = 1 / 180.0  # this value is set in preprocess.py
+    starttime = 0.0
+    endtime = (np.shape(tip)[0]) * dt
+    timearray = np.arange(0, endtime, dt) - starttime
 
-    timearray = tip[:, 0:1] - starttime
-    timediff = (tip[1:, 0:1] - tip[0:-1, 0:1])  # 1: includes last element
+    object = data_raw['object_pose']
+    object = np.array(object).transpose()
+    startx = object[0, 0:1]*100  # cm
+    starty = object[0, 1:2]*100  # cm
+    startpose = object[0, 2:3]
 
-    print timearray[0], timearray[-1], 'raw initial and final time'
-    # print timediff, 'raw timediff'
-
-    pts = tip[:, 1:3]*100  # cm
+    pts = tip[:, 0:2]*100  # cm
     f = np.array([startx, starty, startpose])  # cm
     pts_world_frame2d = _transform_back_frame2d(pts, f)  # put it all in the perspective of the block
 
-    x_pos = pts_world_frame2d[:, 0:1]
-    y_pos = pts_world_frame2d[:, 1:2]
-
+    # x_pos = pts_world_frame2d[:, 0:1]
+    # y_pos = pts_world_frame2d[:, 1:2]
+    x_pos = pts[:, 0:1]
+    y_pos = pts[:, 1:2]
+    print 'bla', pts, np.shape(timearray)
     plt.figure(1)
     ax1 = plt.subplot(211)
     ax1.plot(timearray, x_pos)
@@ -206,7 +219,7 @@ def plot_raw_tip_pose(data_raw):
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('y_pos (cm)')
 
-    ax1.set_title('object position raw data')
+    ax1.set_title('tip position raw data')
 
     plt.show()
 
@@ -289,17 +302,17 @@ def main(argv):
 
     data_raw = h5py.File(h5_filepath, "r", driver='core')
     data_proc = h5py.File(os.path.join(dir_name, name[name.find('_a=')+1:]), "r", driver='core')
+    data_matlab = h5py.File(os.path.join(dir_name, name[name.find('_a=')+1:name.find('.h')])+'_matlab'+'.h5', "r", driver='core')
 
     # figname = h5_filepath.replace('.h5', '.png')
     shape_id = 'rect1'
-
     # data_readout(data_raw, data_proc)
     plot_processed_object_pose(data_proc)
-    plot_raw_object_pose(data_raw)
+    plot_raw_object_pose(data_matlab)
 
     # TODO: is this reasonable? check block sizes (add to the blog post)
-    plot_processed_tip_pose(data_proc)
-    plot_raw_tip_pose(data_raw)
+    # plot_processed_tip_pose(data_proc)
+    # plot_raw_tip_pose(data_matlab)
     # plot_processed_force(data_proc)
     # plot_raw_force(data_raw)
     # data_raw.close()
