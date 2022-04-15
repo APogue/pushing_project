@@ -79,11 +79,7 @@ size(sim_results.obj_configs)
 % consistent with papers
 % issue: why is zhou using system id for the LS fit? If the coefficient of
 % friction doesn't apply (as demonstrated in lynch and zhou sim) and the
-% pressure distribution is fixed, isn't the limit surface fully defined?
-% maybe it has something to do with finding the average center of pressure?
-% investigate why the coefficient of friction is not needed and prove that
-% (thought it was blogged about but can't seem to find)
-
+% pressure distribution is fi
 
 
 
