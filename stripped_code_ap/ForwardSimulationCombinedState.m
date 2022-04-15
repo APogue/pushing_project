@@ -22,7 +22,7 @@ classdef ForwardSimulationCombinedState < handle
             opts = odeset('RelTol',1e-6,...
               'AbsTol', 1e-6,...
               'MaxStep',0.05);             
-            dt_record = 0.02;
+            dt_record = 0.01;
             results.all_contact_info = {};
             results.hand_configs = [];
             results.obj_configs = [];

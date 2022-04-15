@@ -8,9 +8,10 @@ shape_id = 'rect1';
 addpath(strcat('~/pushing_data/', 'delrin/', shape_id, '/'));
 [object_pose, tip_pose, wrench] = get_and_plot_data(file_name_test, shape_id, flag_plot);
 % N = floor((tip_pose(end,1) - tip_pose(1,1)) / 0.01);
-N = 978;
+N = 435;
 [object_pose, tip_pt, force, t_q] = interp_data(object_pose, tip_pose, wrench, N);
 tip_pose = [tip_pt,zeros(length(t_q), 1)];
+
 
 tip_radius = 0.00475;
 shape_vertices = get_shape(shape_id);
@@ -37,9 +38,9 @@ num_supports_pts = size(support_pts, 1);
 options_pressure.mode = 'uniform';
 pressure_weights = AssignPressure(support_pts, options_pressure);
 ls_type = 'quadratic';
-figure, plot(support_pts(:,1), support_pts(:,2), '^');
-axis equal;
-drawnow;
+% figure, plot(support_pts(:,1), support_pts(:,2), '^');
+% axis equal;
+% drawnow;
 % limit surface fitting based on pressure distribution. 
 pushobj = PushedObject(support_pts', pressure_weights, shape_info, ls_type);
 pushobj.FitLS(ls_type, 150, 0.1);
@@ -63,32 +64,17 @@ sim_inst = ForwardSimulationCombinedState(pushobj, hand_traj, hand_single_finger
 toc;
 size(sim_results.obj_configs)
 
+% h5create('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/tip_pose',size(tip_pose))
+% h5write('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/tip_pose',tip_pose)
+% h5create('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/object_pose',size(object_pose))
+% h5write('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/object_pose',object_pose)
+% h5create('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/object_sim',size(sim_results.obj_configs))
+% h5write('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5','/object_sim',sim_results.obj_configs)
+% 
+% h5disp('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5')
+% h5info('a=0_v=10_i=0.000_s=0.000_t=0.698_sim.h5')
 
 
 
 
-plot(sim_results.obj_configs(2, :));
-
-
-
-
-
-
-%% Plotting
-num_rec_configs = size(sim_results.obj_configs, 2);
-figure;
-hold on;
-seg_size = 10;
-for i = 1:1:num_rec_configs
-    if mod(i, seg_size) == 1
-    % Plot the square object.
-        plot(sim_results.obj_configs(1, i), sim_results.obj_configs(2,i), 'b+');
-        vertices = SE2Algebra.GetPointsInGlobalFrame(pushobj.shape_vertices, sim_results.obj_configs(:,i));
-        vertices(:,end+1) = vertices(:,1);
-        plot(vertices(1,:), vertices(2,:), 'r-');
-     % Plot the round point pusher.
-        drawCircle(sim_results.hand_configs(1,i), sim_results.hand_configs(2,i), hand_single_finger.finger_radius, 'k');
-    end
-end
-axis equal;
 

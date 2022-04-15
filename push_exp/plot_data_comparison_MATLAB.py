@@ -95,11 +95,11 @@ def _transform_back_frame2d(pts, f):
     return pts_ret[0:2, :].transpose()
 
 
-def plot_raw_object_pose(data_raw):
+def plot_matlab_object_pose(data_mtlb):
     # see preprocess _zero_initial_position function to understand how the data is preprocessed
     # the world frame moves from the robot frame to the initial position of the block
 
-    object = data_raw['object_pose']
+    object = data_mtlb['object_pose']
     object = np.array(object).transpose()
     #  TODO: startx and starty should be handled within the function (f not as input)
     startx = object[0, 0:1]*100  # cm
@@ -107,7 +107,7 @@ def plot_raw_object_pose(data_raw):
     startpose = object[0, 2:3]
 
     #  in preprocess script the tip pose is wrt initial object pose
-    tip = data_raw['tip_pose']
+    tip = data_mtlb['tip_pose']
     tip = np.array(tip).transpose()
     dt = 1 / 180.0  # this value is set in preprocess.py
     starttime = 0.0
@@ -120,12 +120,10 @@ def plot_raw_object_pose(data_raw):
 
     pts = object[:, 0:2]*100  # cm
     f = np.array([startx, starty, startpose])
-    # pts_world_frame2d = _transform_back_frame2d(pts, f)
+    pts_world_frame2d = _transform_back_frame2d(pts, f)
 
-    # x_pos = pts_world_frame2d[:, 0:1]
-    # y_pos = pts_world_frame2d[:, 1:2]
-    x_pos = pts[:, 0:1]
-    y_pos = pts[:, 1:2]
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
 
     plt.figure(1)
     ax1 = plt.subplot(311)
@@ -143,9 +141,139 @@ def plot_raw_object_pose(data_raw):
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('pose (rad)')
 
-    ax1.set_title('object position raw data')
+    ax1.set_title('object position matlab processed data')
 
     plt.show()
+
+def plot_matlabsim_object_pose(data_mtlb_sim):
+    # see preprocess _zero_initial_position function to understand how the data is preprocessed
+    # the world frame moves from the robot frame to the initial position of the block
+
+    object = data_mtlb_sim['object_pose']
+    object = np.array(object).transpose()
+
+    object_sim = data_mtlb_sim['object_sim']
+    object_sim = np.array(object_sim)
+
+    #  TODO: startx and starty should be handled within the function (f not as input)
+    startx = object[0, 0:1]*100  # cm
+    starty = object[0, 1:2]*100  # cm
+    startpose = object[0, 2:3]
+
+    #  in preprocess script the tip pose is wrt initial object pose
+    tip = data_mtlb_sim['tip_pose']
+    tip = np.array(tip).transpose()
+    dt = .0124  # this value is set in preprocess.py
+    starttime = 0.0
+    endtime = (np.shape(tip)[0]) * dt
+    timearray = np.arange(0, endtime, dt) - starttime
+
+    pose = object[:, 2:3] - startpose
+    print timearray[0], timearray[-1], 'raw initial and final time'
+
+    pts = object[:, 0:2]*100  # cm
+    f = np.array([startx, starty, startpose])
+    pts_world_frame2d = _transform_back_frame2d(pts, f)
+
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
+
+    pose_sim = object_sim[:, 2:3] - startpose
+
+    pts_sim = object_sim[:, 0:2] * 100  # cm
+    pts_world_frame2d_sim = _transform_back_frame2d(pts_sim, f)
+
+    x_pos_sim = pts_world_frame2d_sim[:, 0:1]
+    y_pos_sim = pts_world_frame2d_sim[:, 1:2]
+
+    # plt.figure(1)
+    # ax1 = plt.subplot(311)
+    # ax1.plot(timearray, x_pos)
+    # ax1.set_xlabel('time (sec)')
+    # ax1.set_ylabel('x_pos (cm)')
+    #
+    # ax2 = plt.subplot(312)
+    # ax2.plot(timearray, y_pos)
+    # ax2.set_xlabel('time (sec)')
+    # ax2.set_ylabel('y_pos (cm)')
+    #
+    # ax2 = plt.subplot(313)
+    # ax2.plot(timearray, list(pose))
+    # ax2.set_xlabel('time (sec)')
+    # ax2.set_ylabel('pose (rad)')
+    #
+    # ax1.set_title('object position matlab processed data 435 pts')
+    #
+    # plt.show()
+
+    plt.figure(2)
+    ax1 = plt.subplot(311)
+    ax1.plot(timearray, x_pos_sim)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
+
+    ax2 = plt.subplot(312)
+    ax2.plot(timearray, y_pos_sim)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('y_pos (cm)')
+
+    ax2 = plt.subplot(313)
+    ax2.plot(timearray, list(pose_sim))
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('pose (rad)')
+
+    ax1.set_title('object position matlab simulation 435 pts')
+
+    plt.show()
+
+
+def plot_matlabraw_object_pose(data_mtlbraw):
+    # see preprocess _zero_initial_position function to understand how the data is preprocessed
+    # the world frame moves from the robot frame to the initial position of the block
+
+    object = data_mtlbraw['object_pose']
+    object = np.array(object).transpose()
+    starttime = object[0, 0:1]
+    #  TODO: startx and starty should be handled within the function (f not as input)
+    startx = object[0, 1:2]*100  # cm
+    starty = object[0, 2:3]*100  # cm
+    startpose = object[0, 3:4]
+
+    timearray = object[:, 0:1] - starttime
+    timediff = (object[1:, 0:1] - object[0:-1, 0:1])  # 1: includes last element
+    pose = object[:, 3:4] - startpose
+
+    print timearray[0], timearray[-1], 'raw initial and final time'
+    # print timediff, 'raw timediff'
+
+    pts = object[:, 1:3]*100  # cm
+    f = np.array([startx, starty, startpose])
+    pts_world_frame2d = _transform_back_frame2d(pts, f)
+
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
+
+    plt.figure(1)
+    ax1 = plt.subplot(311)
+    ax1.plot(timearray, x_pos)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
+
+    ax2 = plt.subplot(312)
+    ax2.plot(timearray, y_pos)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('y_pos (cm)')
+
+    ax2 = plt.subplot(313)
+    ax2.plot(timearray, pose)
+    ax2.set_xlabel('time (sec)')
+    ax2.set_ylabel('pose (rad)')
+
+    ax1.set_title('object position maltlab raw data')
+
+    plt.show()
+
+
 
 
 def plot_processed_tip_pose(data_proc):
@@ -180,20 +308,20 @@ def plot_processed_tip_pose(data_proc):
     plt.show()
 
 
-def plot_raw_tip_pose(data_raw):
+def plot_matlab_tip_pose(data_mtlb):
     # see preprocess _zero_initial_position function to understand how the data is preprocessed
     # the world frame moves from the robot frame to the initial position of the block
     # not going to worry about the pose for now although the pose is available
 
     #  in preprocess script the tip pose is wrt initial object pose
-    tip = data_raw['tip_pose']
+    tip = data_mtlb['tip_pose']
     tip = np.array(tip).transpose()
     dt = 1 / 180.0  # this value is set in preprocess.py
     starttime = 0.0
     endtime = (np.shape(tip)[0]) * dt
     timearray = np.arange(0, endtime, dt) - starttime
 
-    object = data_raw['object_pose']
+    object = data_mtlb['object_pose']
     object = np.array(object).transpose()
     startx = object[0, 0:1]*100  # cm
     starty = object[0, 1:2]*100  # cm
@@ -203,10 +331,9 @@ def plot_raw_tip_pose(data_raw):
     f = np.array([startx, starty, startpose])  # cm
     pts_world_frame2d = _transform_back_frame2d(pts, f)  # put it all in the perspective of the block
 
-    # x_pos = pts_world_frame2d[:, 0:1]
-    # y_pos = pts_world_frame2d[:, 1:2]
-    x_pos = pts[:, 0:1]
-    y_pos = pts[:, 1:2]
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
+
     print 'bla', pts, np.shape(timearray)
     plt.figure(1)
     ax1 = plt.subplot(211)
@@ -219,76 +346,50 @@ def plot_raw_tip_pose(data_raw):
     ax2.set_xlabel('time (sec)')
     ax2.set_ylabel('y_pos (cm)')
 
-    ax1.set_title('tip position raw data')
+    ax1.set_title('tip position matlab processed data')
 
     plt.show()
-
-def plot_processed_force(data_proc):
-    # for several files: plot the unrotated raw data
-    # plot the unrotated processed data
-    # assuming the processed data is in a different frame the two should be different
-    # then manually process the raw data (using the rot function here) to look like the processed data
-
-    force_obj = data_proc['force']
-
-    dt = 1 / 180.0
-    starttime = 0.0
-    endtime = np.shape(force_obj)[0] * dt
-    timearray = np.arange(0, endtime, dt) - starttime
-
-    f, axarr = plt.subplots(2, sharex=True)
-    axarr[0].plot(timearray, np.array(force_obj)[:, 0])
-    axarr[1].plot(timearray, np.array(force_obj)[:, 1])
-    axarr[1].set_xlabel('time (sec)')
-    axarr[0].set_ylabel('force x (N)')
-    axarr[1].set_ylabel('force y (N)')
-    axarr[0].set_title('Processed Force Data')
-    # TODO: find a better way to do the figure size
-    f.set_figheight(6)
-    f.set_figwidth(8)
-    plt.show()
-
-def plot_raw_force(data_raw):
-    # the plots aren't matching up this is likely a transformation issue like the tip, and object pose
-    ft_wrench = data_raw['ft_wrench']
-
-    object = data_raw['object_pose']
-    object = np.array(object)
-    startx = object[0, 1:2] # m
-    starty = object[0, 2:3] # m
+def plot_matlabraw_tip_pose(data_mltbraw):
+    # see preprocess _zero_initial_position function to understand how the data is preprocessed
+    # the world frame moves from the robot frame to the initial position of the block
+    # not going to worry about the pose for now although the pose is available
+    object = data_mltbraw['object_pose']
+    object = np.array(object).transpose()
+    startx = object[0, 1:2]*100  # cm
+    starty = object[0, 2:3]*100  # cm
     startpose = object[0, 3:4]
 
-    force = data_raw['ft_wrench']
-    force= np.array(force)
-    starttime = force[0, 0:1]
+    tip = data_mltbraw['tip_pose']
+    tip = np.array(tip).transpose()
+    starttime = tip[0, 0:1]
 
-    timearray = force[:, 0:1] - starttime
-    timediff = (force[1:, 0:1] - force[0:-1, 0:1])  # 1: includes last element
+    timearray = tip[:, 0:1] - starttime
+    timediff = (tip[1:, 0:1] - tip[0:-1, 0:1])  # 1: includes last element
 
     print timearray[0], timearray[-1], 'raw initial and final time'
     # print timediff, 'raw timediff'
 
-    pts = force[:, 1:3]   # m
+    pts = tip[:, 1:3]*100  # cm
     f = np.array([startx, starty, startpose])  # cm
     pts_world_frame2d = _transform_back_frame2d(pts, f)  # put it all in the perspective of the block
 
-    x_force = pts_world_frame2d[:, 0:1]
-    y_force = pts_world_frame2d[:, 1:2]
+    x_pos = pts_world_frame2d[:, 0:1]
+    y_pos = pts_world_frame2d[:, 1:2]
 
-    fig, (ax1, ax2) = plt.subplots(2)
-    fig.set_size_inches(8, 6)
-    # ax1 = plt.subplot(211)
-    ax1.plot(timearray, x_force)
-    ax1.set_ylabel('force x (N)')
+    plt.figure(1)
+    ax1 = plt.subplot(211)
+    ax1.plot(timearray, x_pos)
+    ax1.set_xlabel('time (sec)')
+    ax1.set_ylabel('x_pos (cm)')
 
-    # ax2 = plt.subplot(212)
-    ax2.plot(timearray, y_force)
+    ax2 = plt.subplot(212)
+    ax2.plot(timearray, y_pos)
     ax2.set_xlabel('time (sec)')
-    ax2.set_ylabel('force y (cm)')
+    ax2.set_ylabel('y_pos (cm)')
 
-    ax1.set_title('Raw Force Data')
-
+    ax1.set_title('tip position matlab raw data')
     plt.show()
+
 
 def main(argv):
     # TODO: need to deal with forces as well
@@ -300,23 +401,26 @@ def main(argv):
     dir_name = os.path.dirname(h5_filepath)
     name = os.path.basename(h5_filepath)
 
-    data_raw = h5py.File(h5_filepath, "r", driver='core')
     data_proc = h5py.File(os.path.join(dir_name, name[name.find('_a=')+1:]), "r", driver='core')
     data_matlab = h5py.File(os.path.join(dir_name, name[name.find('_a=')+1:name.find('.h')])+'_matlab'+'.h5', "r", driver='core')
+    data_matlabraw = h5py.File(os.path.join(dir_name, name[name.find('_a=') + 1:name.find('.h')]) + '_matlabraw' + '.h5', "r",
+                            driver='core')
+    data_matlabsim = h5py.File(os.path.join(dir_name, name[name.find('_a=') + 1:name.find('.h')]) + '_sim' + '.h5', "r",
+                            driver='core')
 
-    # figname = h5_filepath.replace('.h5', '.png')
-    shape_id = 'rect1'
-    # data_readout(data_raw, data_proc)
-    plot_processed_object_pose(data_proc)
-    plot_raw_object_pose(data_matlab)
+    # plot_processed_object_pose(data_proc)
+    # plot_matlab_object_pose(data_matlab)
+    plot_matlabsim_object_pose(data_matlabsim)
+    # plot_matlabraw_object_pose(data_matlabraw)
 
     # TODO: is this reasonable? check block sizes (add to the blog post)
     # plot_processed_tip_pose(data_proc)
-    # plot_raw_tip_pose(data_matlab)
-    # plot_processed_force(data_proc)
-    # plot_raw_force(data_raw)
-    # data_raw.close()
-    # data_proc.close()
+    # plot_matlab_tip_pose(data_matlab)
+    # plot_matlabraw_tip_pose(data_matlabraw)
+
+    data_proc.close()
+    data_matlab.close()
+    data_matlabraw.close()
 
 if __name__=='__main__':
     # TODO: currently dumps output into input file
